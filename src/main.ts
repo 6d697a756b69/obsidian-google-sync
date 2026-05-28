@@ -38,6 +38,7 @@ export default class GoogleSyncPlugin extends Plugin {
     private timers = new Map<string, number>();
     private settingsSaveTimer: number | null = null;
     private settingsSavePending: Promise<void> | null = null;
+    private importInFlight: Promise<void> | null = null;
 
     async onload(): Promise<void> {
         await this.loadAll();
@@ -68,6 +69,7 @@ export default class GoogleSyncPlugin extends Plugin {
         );
         this.app.workspace.onLayoutReady(() => {
             this.router.buildIndex();
+            void this.importOnStartup();
             void this.maybeRunLifecycle();
         });
     }
@@ -259,17 +261,11 @@ export default class GoogleSyncPlugin extends Plugin {
             return;
         }
         try {
-            const { events, tasks, failed } = await this.importer.importAll();
-            const lifecycleCounts = await this.lifecycle.runOnce();
-            this.lastLifecycleRun = Date.now();
-            await this.saveAll();
-            this.router.buildIndex();
-            const moved =
-                lifecycleCounts.archived + lifecycleCounts.overdue + lifecycleCounts.completed;
-            const lifecycleSuffix =
-                moved > 0
-                    ? ` Lifecycle moved ${lifecycleCounts.archived} archived, ${lifecycleCounts.overdue} overdue, ${lifecycleCounts.completed} completed.`
-                    : "";
+            const { events, tasks, failed, lifecycleCounts } = await this.runImportPipeline();
+            const moved = lifecycleCounts.archived + lifecycleCounts.overdue + lifecycleCounts.completed;
+            const lifecycleSuffix = moved > 0
+                ? ` Lifecycle moved ${lifecycleCounts.archived} archived, ${lifecycleCounts.overdue} overdue, ${lifecycleCounts.completed} completed.`
+                : "";
             new Notice(
                 failed > 0
                     ? `google-sync: imported ${events} event(s), ${tasks} task(s), ${failed} failed.${lifecycleSuffix}`
@@ -277,6 +273,48 @@ export default class GoogleSyncPlugin extends Plugin {
             );
         } catch (e) {
             new Notice(`google-sync import error: ${(e as Error).message}`);
+        }
+    }
+
+    private async importOnStartup(): Promise<void> {
+        if (!this.settings.importOnStartup) return;
+        if (!(await this.auth.isConnected())) return;
+        try {
+            await this.runImportPipeline();
+        } catch (e) {
+            console.error("[google-sync] startup import failed", e);
+        }
+    }
+
+    private async runImportPipeline(): Promise<{
+        events: number;
+        tasks: number;
+        failed: number;
+        lifecycleCounts: Awaited<ReturnType<Lifecycle["runOnce"]>>;
+    }> {
+        if (this.importInFlight) {
+            await this.importInFlight;
+            return { events: 0, tasks: 0, failed: 0, lifecycleCounts: { archived: 0, overdue: 0, completed: 0 } };
+        }
+        let result!: {
+            events: number;
+            tasks: number;
+            failed: number;
+            lifecycleCounts: Awaited<ReturnType<Lifecycle["runOnce"]>>;
+        };
+        this.importInFlight = (async () => {
+            const { events, tasks, failed } = await this.importer.importAll();
+            const lifecycleCounts = await this.lifecycle.runOnce();
+            this.lastLifecycleRun = Date.now();
+            await this.saveAll();
+            this.router.buildIndex();
+            result = { events, tasks, failed, lifecycleCounts };
+        })();
+        try {
+            await this.importInFlight;
+            return result;
+        } finally {
+            this.importInFlight = null;
         }
     }
 

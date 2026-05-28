@@ -19,6 +19,7 @@ export interface GoogleSyncSettings {
     syncOnCreate: boolean;
     syncOnModify: boolean;
     syncOnDelete: boolean;
+    importOnStartup: boolean;
     importOnlyDefaultCalendar: boolean;
     importOnlyDefaultTaskList: boolean;
     autoArchiveEnabled: boolean;
@@ -46,6 +47,7 @@ export const DEFAULT_SETTINGS: GoogleSyncSettings = {
     syncOnCreate: true,
     syncOnModify: true,
     syncOnDelete: true,
+    importOnStartup: false,
     importOnlyDefaultCalendar: true,
     importOnlyDefaultTaskList: true,
     autoArchiveEnabled: true,
@@ -236,6 +238,11 @@ export class GoogleSyncSettingTab extends PluginSettingTab {
             "Sync on delete",
             "Delete the Google item when a note is deleted.",
             "syncOnDelete",
+        );
+        this.toggle(
+            "Import from Google on startup",
+            "When enabled, pull configured Google Calendar events and Google Tasks when Obsidian starts. Off by default.",
+            "importOnStartup",
         );
         this.toggle(
             "Import only configured calendar",

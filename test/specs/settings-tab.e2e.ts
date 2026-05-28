@@ -82,6 +82,7 @@ describe("settings tab (UI)", function () {
             "Sync on create",
             "Sync on modify",
             "Sync on delete",
+            "Import from Google on startup",
             "Import only configured calendar",
             "Import only configured task list",
             "Auto-archive past events",
