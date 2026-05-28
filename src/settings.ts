@@ -138,6 +138,23 @@ export class GoogleSyncSettingTab extends PluginSettingTab {
     }
 
     display(): void {
+        try {
+            this.renderUnsafe();
+        } catch (e) {
+            // Settings render must never crash Obsidian's renderer. Log + show a banner so
+            // the user (and the console) gets a clear signal instead of a frozen UI.
+            console.error("[google-sync] settings render failed:", e);
+            this.containerEl.empty();
+            this.containerEl.createEl("h3", {
+                text: "Google Sync — settings failed to load",
+            });
+            this.containerEl.createEl("p", {
+                text: `${(e as Error).message}. See the developer console for details.`,
+            });
+        }
+    }
+
+    private renderUnsafe(): void {
         const { containerEl } = this;
         containerEl.empty();
 
