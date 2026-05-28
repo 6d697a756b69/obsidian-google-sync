@@ -39,9 +39,31 @@ export interface TokenStore {
 // ---- PKCE helpers ----
 
 function base64url(bytes: Uint8Array): string {
-    let s = "";
-    for (const b of bytes) s += String.fromCharCode(b);
-    return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    const table = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+    let out = "";
+    let i = 0;
+
+    for (; i + 2 < bytes.length; i += 3) {
+        const n = (bytes[i]! << 16) | (bytes[i + 1]! << 8) | bytes[i + 2]!;
+        out += table[(n >> 18) & 63]!;
+        out += table[(n >> 12) & 63]!;
+        out += table[(n >> 6) & 63]!;
+        out += table[n & 63]!;
+    }
+
+    const rem = bytes.length - i;
+    if (rem === 1) {
+        const n = bytes[i]! << 16;
+        out += table[(n >> 18) & 63]!;
+        out += table[(n >> 12) & 63]!;
+    } else if (rem === 2) {
+        const n = (bytes[i]! << 16) | (bytes[i + 1]! << 8);
+        out += table[(n >> 18) & 63]!;
+        out += table[(n >> 12) & 63]!;
+        out += table[(n >> 6) & 63]!;
+    }
+
+    return out;
 }
 
 export function generateCodeVerifier(): string {

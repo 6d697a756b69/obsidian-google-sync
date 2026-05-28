@@ -1,4 +1,4 @@
-# Google Calendar & Tasks Sync for Obsidian
+# Google Calendar and Tasks Sync
 
 Keep your Obsidian notes in sync with **Google Calendar** and **Google Tasks** — on desktop and mobile.
 
@@ -27,8 +27,6 @@ If you need a full two-way merge workflow, test carefully with a spare calendar/
 
 ### From Obsidian Community Plugins
 
-After the plugin is accepted into the community directory:
-
 1. Open Obsidian.
 2. Go to **Settings → Community plugins**.
 3. Turn off **Restricted mode** if needed.
@@ -36,7 +34,7 @@ After the plugin is accepted into the community directory:
 5. Search for **Google Calendar and Tasks Sync**.
 6. Select **Install**, then **Enable**.
 
-### Manual install while waiting for community review
+### Manual install (GitHub release)
 
 1. Download `main.js`, `manifest.json`, and `styles.css` from the latest GitHub release.
 2. In your vault, create:
