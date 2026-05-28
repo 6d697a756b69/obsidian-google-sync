@@ -17,21 +17,55 @@ export interface ImportOptions {
     createOnly?: boolean;
 }
 
-function slugify(value: string): string {
+function slugify(value: string, maxLength: number): string {
     const slug = value
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/^-+|-+$/g, "")
-        .slice(0, 60);
-    return slug || "untitled";
+        .slice(0, maxLength);
+    return slug.replace(/-+$/g, "") || "untitled";
 }
 
-function pathFor(folder: string, id: string | undefined, title: string | undefined, fallback: string): string {
-    const name = slugify(`${title || fallback}-${id || "new"}`);
-    return normalizePath(`${folder}/${name}.md`);
+function basePathFor(
+    folder: string,
+    id: string | undefined,
+    title: string | undefined,
+    fallback: string,
+): string {
+    const titlePart = slugify(title || fallback, 50);
+    const idPart = id ? slugify(id, 80) : "new";
+    return normalizePath(`${folder}/${titlePart}-${idPart}.md`);
 }
 
-async function findByGoogleId(app: App, folder: string, googleId: string | undefined): Promise<TFile | null> {
+async function unusedPath(app: App, preferredPath: string): Promise<string> {
+    const normalized = normalizePath(preferredPath);
+    if (!app.vault.getAbstractFileByPath(normalized)) return normalized;
+
+    const dot = normalized.lastIndexOf(".");
+    const stem = dot === -1 ? normalized : normalized.slice(0, dot);
+    const ext = dot === -1 ? "" : normalized.slice(dot);
+    for (let i = 2; i < 1000; i++) {
+        const candidate = `${stem}-${i}${ext}`;
+        if (!app.vault.getAbstractFileByPath(candidate)) return candidate;
+    }
+    throw new Error(`Could not find an unused import path for ${normalized}`);
+}
+
+async function pathFor(
+    app: App,
+    folder: string,
+    id: string | undefined,
+    title: string | undefined,
+    fallback: string,
+): Promise<string> {
+    return unusedPath(app, basePathFor(folder, id, title, fallback));
+}
+
+async function findByGoogleId(
+    app: App,
+    folder: string,
+    googleId: string | undefined,
+): Promise<TFile | null> {
     if (!googleId) return null;
     for (const file of app.vault.getMarkdownFiles()) {
         if (!normalizePath(file.path).startsWith(`${normalizePath(folder)}/`)) continue;
@@ -86,12 +120,18 @@ export class GoogleImporter {
             if (existing) {
                 if (options.createOnly) return;
                 await writeFrontmatter(this.app, existing, fm);
-            }
-            else await upsertMarkdownFile(
-                this.app,
-                pathFor(this.settings().eventsFolder, event.id, event.summary, "event"),
-                fm,
-            );
+            } else
+                await upsertMarkdownFile(
+                    this.app,
+                    await pathFor(
+                        this.app,
+                        this.settings().eventsFolder,
+                        event.id,
+                        event.summary,
+                        "event",
+                    ),
+                    fm,
+                );
             counts.events++;
         } catch (e) {
             counts.failed++;
@@ -128,12 +168,18 @@ export class GoogleImporter {
             if (existing) {
                 if (options.createOnly) return;
                 await writeFrontmatter(this.app, existing, fm);
-            }
-            else await upsertMarkdownFile(
-                this.app,
-                pathFor(this.settings().tasksFolder, task.id, task.title, "task"),
-                fm,
-            );
+            } else
+                await upsertMarkdownFile(
+                    this.app,
+                    await pathFor(
+                        this.app,
+                        this.settings().tasksFolder,
+                        task.id,
+                        task.title,
+                        "task",
+                    ),
+                    fm,
+                );
             counts.tasks++;
         } catch (e) {
             counts.failed++;

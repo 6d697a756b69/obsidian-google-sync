@@ -1,57 +1,106 @@
 # Google Calendar & Tasks Sync for Obsidian
 
-Keep your Obsidian notes in sync with **Google Calendar** and **Google Tasks** — on your
-computer *and* your iPhone.
+Keep your Obsidian notes in sync with **Google Calendar** and **Google Tasks** — on desktop and mobile.
 
-Write notes the way you normally would. The plugin watches two folders in your vault and
-mirrors them to Google for you:
+This plugin is for people who like planning in Markdown but still want their calendar and task list available everywhere Google works.
+
+## What it syncs
 
 - 📅 Notes in **`events/`** become Google Calendar events.
 - ✅ Notes in **`tasks/`** become Google Tasks.
+- Editing a synced note updates Google.
+- Deleting or renaming a synced note updates Google.
+- Google events/tasks can be imported into your vault.
+- Past events and old tasks can be tidied into archive/overdue/completed folders.
 
-Edit a note, the event updates. Delete the note, the event goes away. Tick a task off,
-Google Tasks marks it done.
+## Important sync model
 
-## What it does
+This is intentionally conservative so it does not destroy local edits:
 
-- **Events** — title, date/time, all-day, time zone, location, attendees, and recurring
-  events all sync to Google Calendar.
-- **Tasks** — title, due date, notes, and completion sync to Google Tasks.
-- **Tidies up after itself** — once a day it moves past events to `events/archive/`,
-  overdue tasks to `tasks/overdue/`, and finished tasks to `tasks/completed/` so your
-  active folders stay clean.
-- **Works on iPhone** — same flow as desktop, including the Google sign-in.
-- **Plays nicely with Google** — backs off and retries when Google is busy, so you don't
-  get errored out.
+- **Obsidian → Google:** automatic while Obsidian is open, if the matching sync-on-create/modify/delete settings are enabled.
+- **Google → Obsidian:** manual via **Import events and tasks from Google**.
+- **Google → Obsidian on startup:** optional and off by default. When enabled, it only creates new missing notes and does **not** overwrite existing notes.
 
-## Getting started
+If you need a full two-way merge workflow, test carefully with a spare calendar/list first.
 
-1. Install the plugin into your vault.
-2. Connect it to your Google account — the one-time setup is in
-   [docs/google-setup.md](docs/google-setup.md).
-3. In Obsidian, run **Connect to Google** and approve in the browser.
-4. Make a note in `events/` or `tasks/`, then run **Sync now**.
+## Install
 
-On iPhone, the extra checklist is in [docs/ios-checklist.md](docs/ios-checklist.md).
+### From Obsidian Community Plugins
 
-## Commands you'll use
+After the plugin is accepted into the community directory:
 
-Open Obsidian's command palette and search for:
+1. Open Obsidian.
+2. Go to **Settings → Community plugins**.
+3. Turn off **Restricted mode** if needed.
+4. Select **Browse**.
+5. Search for **Google Calendar/Tasks Sync**.
+6. Select **Install**, then **Enable**.
 
-- **Connect to Google** — sign in (do this once).
-- **Sync now** — push your latest changes to Google.
-- **Import events and tasks from Google** — pull events/tasks from your configured Google Calendar and Google Tasks list into your vault folders. By default it only imports the configured calendar/list to avoid vault spam; turn off the import-only toggles if you intentionally want every visible calendar/task list. It runs the lifecycle tidy-up immediately afterwards, so imported past events go to `events/archive/` and imported overdue/completed tasks go to `tasks/overdue/` or `tasks/completed/`. You can enable **Import from Google on startup** if you want this to run automatically when Obsidian opens; it is off by default and only creates new additions, leaving existing imported notes untouched.
-- **Run lifecycle scan** — archive past events and tidy completed/overdue tasks.
-- **Test connection** — quick check that Google is reachable.
-- **Validate setup** — confirms your settings, calendar, and task list all work.
-- **Disconnect from Google** — sign out.
+### Manual install while waiting for community review
 
-## How a note becomes an event or task
+1. Download `main.js`, `manifest.json`, and `styles.css` from the latest GitHub release.
+2. In your vault, create:
 
-The plugin reads the **frontmatter** at the top of each note (the bit between `---`
-fences). The body of the note stays in Obsidian — only the frontmatter syncs.
+    ```text
+    .obsidian/plugins/google-sync/
+    ```
 
-**Event** (`events/my-meeting.md`):
+3. Put the three downloaded files in that folder.
+4. Restart Obsidian.
+5. Go to **Settings → Community plugins** and enable **Google Calendar/Tasks Sync**.
+
+## First-time setup
+
+The plugin needs your own Google OAuth client. This avoids any shared hosted backend and keeps Google tokens in your vault’s local plugin data.
+
+Follow the full guide here:
+
+- [Google setup guide](docs/google-setup.md)
+
+Short version:
+
+1. Create or choose a Google Cloud project.
+2. Enable **Google Calendar API** and **Google Tasks API**.
+3. Configure the OAuth consent screen.
+4. Host the tiny redirect bridge page included in this repo.
+5. Create a **Web application** OAuth client.
+6. Paste the client ID, client secret, and bridge URL into the plugin settings.
+7. Run **Connect to Google** from Obsidian’s command palette.
+8. Run **Validate setup**.
+
+For iPhone/iPad setup and checks, use:
+
+- [iOS checklist](docs/ios-checklist.md)
+
+## Commands
+
+Open Obsidian’s command palette and search for these commands:
+
+- **Connect to Google** — sign in once and store Google tokens in the plugin data file.
+- **Sync now** — push matching Obsidian notes to Google.
+- **Import events and tasks from Google** — pull Google items into your vault. By default it only imports the configured calendar and task list to avoid vault spam.
+- **Run lifecycle scan** — move past events to `events/archive/`, overdue tasks to `tasks/overdue/`, and completed tasks to `tasks/completed/`.
+- **Test connection** — quick Google connectivity check.
+- **Validate setup** — checks OAuth settings, Google connection, selected calendar, and selected task list.
+- **Disconnect from Google** — remove stored Google tokens.
+
+## Folder layout
+
+The defaults are:
+
+```text
+events/
+events/archive/
+tasks/
+tasks/overdue/
+tasks/completed/
+```
+
+You can change the folder names in plugin settings before you start syncing.
+
+## Event note example
+
+Create a Markdown file under `events/`:
 
 ```yaml
 ---
@@ -66,7 +115,11 @@ attendees:
 Notes for myself stay here, in Obsidian.
 ```
 
-**Task** (`tasks/buy-milk.md`):
+After syncing, the plugin writes a `googleId` field into the frontmatter. Leave that field alone; it is how the plugin knows which Google event belongs to the note.
+
+## Task note example
+
+Create a Markdown file under `tasks/`:
 
 ```yaml
 ---
@@ -74,12 +127,30 @@ title: Buy milk
 due: 2026-06-01
 completed: false
 ---
+Optional task notes go here.
 ```
 
-After the first sync, a `googleId` field appears in the frontmatter — that's how the
-plugin knows which Google event/task this note belongs to. Leave it alone.
+Set `completed: true` and sync to mark the task completed in Google Tasks.
 
-## For developers
+## Privacy and safety
 
-Toolchain, build scripts, tests, and architecture notes live in
-[docs/development.md](docs/development.md).
+- The plugin talks directly to Google Calendar and Google Tasks using Obsidian’s `requestUrl` API.
+- It does not include analytics or telemetry.
+- Google OAuth tokens are stored by Obsidian in the plugin’s vault-local `data.json`.
+- Your OAuth client secret is also stored in plugin settings. Treat the vault’s `.obsidian/plugins/google-sync/data.json` as private.
+- The plugin only manages notes inside the configured event/task folders.
+- Startup Google import is off by default and additions-only when enabled.
+
+## Troubleshooting
+
+- Run **Validate setup** first. It gives the clearest checklist of what is missing.
+- If login does not return to Obsidian, check that your Google OAuth redirect URI exactly matches your hosted bridge URL.
+- If a note does not sync, check that it is under the configured `events/` or `tasks/` folder and has the required frontmatter fields.
+- If times look wrong, add an explicit `timezone` such as `Pacific/Auckland`.
+- Test with a spare Google calendar/task list before using important real data.
+
+More developer and test notes:
+
+- [Development guide](docs/development.md)
+- [Google setup guide](docs/google-setup.md)
+- [iOS checklist](docs/ios-checklist.md)

@@ -42,14 +42,26 @@ function install(): void {
                     {
                         id: "import-event-1",
                         summary: "Imported appointment",
-                        start: { dateTime: "2026-06-02T09:00:00+12:00", timeZone: "Pacific/Auckland" },
-                        end: { dateTime: "2026-06-02T10:00:00+12:00", timeZone: "Pacific/Auckland" },
+                        start: {
+                            dateTime: "2026-06-02T09:00:00+12:00",
+                            timeZone: "Pacific/Auckland",
+                        },
+                        end: {
+                            dateTime: "2026-06-02T10:00:00+12:00",
+                            timeZone: "Pacific/Auckland",
+                        },
                     },
                     {
                         id: "past-import-event-1",
                         summary: "Past imported appointment",
-                        start: { dateTime: "2026-01-02T09:00:00+13:00", timeZone: "Pacific/Auckland" },
-                        end: { dateTime: "2026-01-02T10:00:00+13:00", timeZone: "Pacific/Auckland" },
+                        start: {
+                            dateTime: "2026-01-02T09:00:00+13:00",
+                            timeZone: "Pacific/Auckland",
+                        },
+                        end: {
+                            dateTime: "2026-01-02T10:00:00+13:00",
+                            timeZone: "Pacific/Auckland",
+                        },
                     },
                 ],
                 nextSyncToken: "sync-token",
@@ -60,8 +72,14 @@ function install(): void {
                     {
                         id: "secondary-event-1",
                         summary: "Secondary appointment",
-                        start: { dateTime: "2026-06-03T09:00:00+12:00", timeZone: "Pacific/Auckland" },
-                        end: { dateTime: "2026-06-03T10:00:00+12:00", timeZone: "Pacific/Auckland" },
+                        start: {
+                            dateTime: "2026-06-03T09:00:00+12:00",
+                            timeZone: "Pacific/Auckland",
+                        },
+                        end: {
+                            dateTime: "2026-06-03T10:00:00+12:00",
+                            timeZone: "Pacific/Auckland",
+                        },
                     },
                 ],
             });

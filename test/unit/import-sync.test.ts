@@ -89,14 +89,17 @@ describe("Google import sync", () => {
     });
 
     it("maps a completed Google Task into task note frontmatter", () => {
-        const fm = remoteTaskToNote({
-            id: "t1",
-            title: "Buy milk",
-            notes: "Oat",
-            due: "2026-06-01T00:00:00.000Z",
-            status: "completed",
-            completed: "2026-06-01T03:04:05.000Z",
-        }, "L1");
+        const fm = remoteTaskToNote(
+            {
+                id: "t1",
+                title: "Buy milk",
+                notes: "Oat",
+                due: "2026-06-01T00:00:00.000Z",
+                status: "completed",
+                completed: "2026-06-01T03:04:05.000Z",
+            },
+            "L1",
+        );
 
         expect(fm).to.deep.equal({
             title: "Buy milk",

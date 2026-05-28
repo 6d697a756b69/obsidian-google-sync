@@ -55,7 +55,12 @@ export default class GoogleSyncPlugin extends Plugin {
         this.tasks = new GoogleTasksClient(http, tokenProvider);
         this.router = new SyncRouter(this.app, this.calendar, this.tasks, () => this.settings);
         this.lifecycle = new Lifecycle(this.app, this.tasks, () => this.settings);
-        this.importer = new GoogleImporter(this.app, this.calendar, this.tasks, () => this.settings);
+        this.importer = new GoogleImporter(
+            this.app,
+            this.calendar,
+            this.tasks,
+            () => this.settings,
+        );
 
         this.addSettingTab(new GoogleSyncSettingTab(this.app, this));
         registerCommands(this);
@@ -262,10 +267,12 @@ export default class GoogleSyncPlugin extends Plugin {
         }
         try {
             const { events, tasks, failed, lifecycleCounts } = await this.runImportPipeline();
-            const moved = lifecycleCounts.archived + lifecycleCounts.overdue + lifecycleCounts.completed;
-            const lifecycleSuffix = moved > 0
-                ? ` Lifecycle moved ${lifecycleCounts.archived} archived, ${lifecycleCounts.overdue} overdue, ${lifecycleCounts.completed} completed.`
-                : "";
+            const moved =
+                lifecycleCounts.archived + lifecycleCounts.overdue + lifecycleCounts.completed;
+            const lifecycleSuffix =
+                moved > 0
+                    ? ` Lifecycle moved ${lifecycleCounts.archived} archived, ${lifecycleCounts.overdue} overdue, ${lifecycleCounts.completed} completed.`
+                    : "";
             new Notice(
                 failed > 0
                     ? `google-sync: imported ${events} event(s), ${tasks} task(s), ${failed} failed.${lifecycleSuffix}`
@@ -286,10 +293,12 @@ export default class GoogleSyncPlugin extends Plugin {
         }
     }
 
-    private async runImportPipeline(options: {
-        createOnly?: boolean;
-        lifecycleOnlyWhenAdded?: boolean;
-    } = {}): Promise<{
+    private async runImportPipeline(
+        options: {
+            createOnly?: boolean;
+            lifecycleOnlyWhenAdded?: boolean;
+        } = {},
+    ): Promise<{
         events: number;
         tasks: number;
         failed: number;
@@ -297,7 +306,12 @@ export default class GoogleSyncPlugin extends Plugin {
     }> {
         if (this.importInFlight) {
             await this.importInFlight;
-            return { events: 0, tasks: 0, failed: 0, lifecycleCounts: { archived: 0, overdue: 0, completed: 0 } };
+            return {
+                events: 0,
+                tasks: 0,
+                failed: 0,
+                lifecycleCounts: { archived: 0, overdue: 0, completed: 0 },
+            };
         }
         let result!: {
             events: number;

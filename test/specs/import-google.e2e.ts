@@ -41,7 +41,9 @@ describe("Google import against mocked Google", function () {
             const defaultTaskFile = app.vault.getAbstractFileByPath(
                 "tasks/default-list-task-default-import-task-1.md",
             );
-            const taskFile = app.vault.getAbstractFileByPath("tasks/imported-task-import-task-1.md");
+            const taskFile = app.vault.getAbstractFileByPath(
+                "tasks/imported-task-import-task-1.md",
+            );
             const overdueTaskFile = app.vault.getAbstractFileByPath(
                 "tasks/overdue/late-imported-task-late-import-task-1.md",
             );
@@ -49,11 +51,15 @@ describe("Google import against mocked Google", function () {
                 event: eventFile instanceof obsidian.TFile ? await app.vault.read(eventFile) : null,
                 secondaryEventExists: secondaryEventFile instanceof obsidian.TFile,
                 pastEvent:
-                    pastEventFile instanceof obsidian.TFile ? await app.vault.read(pastEventFile) : null,
+                    pastEventFile instanceof obsidian.TFile
+                        ? await app.vault.read(pastEventFile)
+                        : null,
                 defaultTaskExists: defaultTaskFile instanceof obsidian.TFile,
                 task: taskFile instanceof obsidian.TFile ? await app.vault.read(taskFile) : null,
                 overdueTask:
-                    overdueTaskFile instanceof obsidian.TFile ? await app.vault.read(overdueTaskFile) : null,
+                    overdueTaskFile instanceof obsidian.TFile
+                        ? await app.vault.read(overdueTaskFile)
+                        : null,
             };
         });
 
@@ -72,5 +78,44 @@ describe("Google import against mocked Google", function () {
         expect(calls.some((c) => c.url.includes("/calendars/secondary/events"))).to.equal(false);
         expect(calls.some((c) => c.url.includes("/lists/L1/tasks"))).to.equal(true);
         expect(calls.some((c) => c.url.includes("/lists/%40default/tasks"))).to.equal(false);
+    });
+
+    it("does not overwrite an unrelated note when an import path collides", async () => {
+        const result = await browser.executeObsidian(async ({ app, obsidian }) => {
+            const plugin = (app as unknown as { plugins: { plugins: Record<string, unknown> } })
+                .plugins.plugins["google-sync"] as { importFromGoogle(): Promise<void> };
+
+            for (const path of [
+                "events/imported-appointment-import-event-1.md",
+                "events/imported-appointment-import-event-1-2.md",
+            ]) {
+                const old = app.vault.getAbstractFileByPath(path);
+                if (old instanceof obsidian.TFile) await app.vault.delete(old);
+            }
+
+            await app.vault.create(
+                "events/imported-appointment-import-event-1.md",
+                "---\ntitle: Local note using same filename\ndate: 2026-06-02T09:00:00+12:00\n---\nDo not overwrite me.",
+            );
+
+            await plugin.importFromGoogle();
+
+            const original = app.vault.getAbstractFileByPath(
+                "events/imported-appointment-import-event-1.md",
+            );
+            const imported = app.vault.getAbstractFileByPath(
+                "events/imported-appointment-import-event-1-2.md",
+            );
+            return {
+                original:
+                    original instanceof obsidian.TFile ? await app.vault.read(original) : null,
+                imported:
+                    imported instanceof obsidian.TFile ? await app.vault.read(imported) : null,
+            };
+        });
+
+        expect(result.original).to.contain("Do not overwrite me.");
+        expect(result.original).to.not.contain("googleId: import-event-1");
+        expect(result.imported).to.contain("googleId: import-event-1");
     });
 });

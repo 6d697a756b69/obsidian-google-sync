@@ -14,7 +14,10 @@ export interface ListTasksOptions {
     pageSize?: number;
 }
 
-function addQuery(url: string, params: Record<string, string | number | boolean | undefined>): string {
+function addQuery(
+    url: string,
+    params: Record<string, string | number | boolean | undefined>,
+): string {
     const query = Object.entries(params)
         .filter((entry): entry is [string, string | number | boolean] => entry[1] !== undefined)
         .map(([key, value]) => `${enc(key)}=${enc(String(value))}`)

@@ -56,7 +56,8 @@ describe("OAuth callback flow (mocked Google)", function () {
             } finally {
                 window.open = origOpen;
             }
-            if (!capturedUrl) return { ok: false as const, reason: "connect() did not call window.open" };
+            if (!capturedUrl)
+                return { ok: false as const, reason: "connect() did not call window.open" };
 
             const u = new URL(capturedUrl);
             const state = u.searchParams.get("state");
@@ -71,9 +72,7 @@ describe("OAuth callback flow (mocked Google)", function () {
             const calls = (
                 window as unknown as { __gsyncCalls?: { method: string; url: string }[] }
             ).__gsyncCalls;
-            const tokenCall = calls?.find((c) =>
-                c.url.includes("oauth2.googleapis.com/token"),
-            );
+            const tokenCall = calls?.find((c) => c.url.includes("oauth2.googleapis.com/token"));
             return {
                 ok: true as const,
                 clientId,

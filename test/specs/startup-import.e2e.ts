@@ -30,12 +30,14 @@ describe("startup Google import", function () {
         await resetMockCalls();
 
         await browser.executeObsidian(async ({ app }) => {
-            const plugins = (app as unknown as {
-                plugins: {
-                    disablePlugin(pluginId: string): Promise<void>;
-                    enablePlugin(pluginId: string): Promise<void>;
-                };
-            }).plugins;
+            const plugins = (
+                app as unknown as {
+                    plugins: {
+                        disablePlugin(pluginId: string): Promise<void>;
+                        enablePlugin(pluginId: string): Promise<void>;
+                    };
+                }
+            ).plugins;
             await plugins.disablePlugin("google-sync");
             await plugins.enablePlugin("google-sync");
         });
@@ -49,7 +51,9 @@ describe("startup Google import", function () {
                     const taskFile = app.vault.getAbstractFileByPath(
                         "tasks/imported-task-import-task-1.md",
                     );
-                    return eventFile instanceof obsidian.TFile && taskFile instanceof obsidian.TFile;
+                    return (
+                        eventFile instanceof obsidian.TFile && taskFile instanceof obsidian.TFile
+                    );
                 }),
             { timeout: 5000, interval: 250, timeoutMsg: "startup import did not create notes" },
         );
@@ -58,7 +62,9 @@ describe("startup Google import", function () {
             const eventFile = app.vault.getAbstractFileByPath(
                 "events/imported-appointment-import-event-1.md",
             );
-            const taskFile = app.vault.getAbstractFileByPath("tasks/imported-task-import-task-1.md");
+            const taskFile = app.vault.getAbstractFileByPath(
+                "tasks/imported-task-import-task-1.md",
+            );
             return {
                 event: eventFile instanceof obsidian.TFile ? await app.vault.read(eventFile) : null,
                 task: taskFile instanceof obsidian.TFile ? await app.vault.read(taskFile) : null,
@@ -100,12 +106,14 @@ describe("startup Google import", function () {
         await resetMockCalls();
 
         await browser.executeObsidian(async ({ app }) => {
-            const plugins = (app as unknown as {
-                plugins: {
-                    disablePlugin(pluginId: string): Promise<void>;
-                    enablePlugin(pluginId: string): Promise<void>;
-                };
-            }).plugins;
+            const plugins = (
+                app as unknown as {
+                    plugins: {
+                        disablePlugin(pluginId: string): Promise<void>;
+                        enablePlugin(pluginId: string): Promise<void>;
+                    };
+                }
+            ).plugins;
             await plugins.disablePlugin("google-sync");
             await plugins.enablePlugin("google-sync");
         });
@@ -115,7 +123,9 @@ describe("startup Google import", function () {
             const eventFile = app.vault.getAbstractFileByPath(
                 "events/imported-appointment-import-event-1.md",
             );
-            const taskFile = app.vault.getAbstractFileByPath("tasks/imported-task-import-task-1.md");
+            const taskFile = app.vault.getAbstractFileByPath(
+                "tasks/imported-task-import-task-1.md",
+            );
             return {
                 event: eventFile instanceof obsidian.TFile ? await app.vault.read(eventFile) : null,
                 task: taskFile instanceof obsidian.TFile ? await app.vault.read(taskFile) : null,
