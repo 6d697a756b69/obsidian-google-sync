@@ -90,6 +90,15 @@ Then add folder mappings in Obsidian Templater:
 - `events` → `templates/google-sync/event-template.md`
 - `tasks` → `templates/google-sync/task-template.md`
 
+Quick smoke test from terminal:
+
+```bash
+./scripts/verify-setup.sh /path/to/your/vault
+./scripts/bootstrap-sample-notes.sh /path/to/your/vault
+```
+
+Screenshot walkthrough: [Templater setup screenshots](https://github.com/Cordedmink2/obsidian-google-sync/tree/main/docs/assets/templater)
+
 ## Commands
 
 Open Obsidian’s command palette and search for these commands:
@@ -158,6 +167,8 @@ Set `completed: true` and sync to mark the task completed in Google Tasks.
 - Your OAuth client secret is also stored in plugin settings. Treat the vault’s `.obsidian/plugins/google-sync/data.json` as private.
 - The plugin only manages notes inside the configured event/task folders.
 - Startup Google import is off by default and additions-only when enabled.
+- Full privacy details: [PRIVACY.md](https://github.com/Cordedmink2/obsidian-google-sync/blob/main/PRIVACY.md)
+- Security reporting policy: [SECURITY.md](https://github.com/Cordedmink2/obsidian-google-sync/blob/main/SECURITY.md)
 
 ## Troubleshooting
 

@@ -119,6 +119,15 @@ Then add the folder mappings in Obsidian:
 - `events` → `templates/google-sync/event-template.md`
 - `tasks` → `templates/google-sync/task-template.md`
 
+Optional smoke-test commands:
+
+```bash
+./scripts/verify-setup.sh /path/to/your/vault
+./scripts/bootstrap-sample-notes.sh /path/to/your/vault
+```
+
+Screenshot references: [`docs/assets/templater/`](assets/templater/)
+
 ## 7. Test with safe data first
 
 Before syncing important real calendars/tasks:

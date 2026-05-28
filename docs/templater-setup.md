@@ -39,6 +39,21 @@ with:
 - `templates_folder: "templates"`
 - `trigger_on_file_creation: true`
 
+## Smoke-test commands (recommended)
+
+After setup, run:
+
+```bash
+./scripts/verify-setup.sh /path/to/your/vault
+./scripts/bootstrap-sample-notes.sh /path/to/your/vault
+```
+
+Then in Obsidian:
+
+1. Run **Sync now**.
+2. Confirm the sample event/task appear in Google.
+3. (Optional) Mark the sample task `completed: true` and sync again.
+
 ## Manual setup (no script)
 
 1. Create folder: `templates/google-sync/`
@@ -85,6 +100,28 @@ completed: false
 
 Notes:
 -
+```
+
+## Screenshot walkthrough
+
+Add these screenshots to make onboarding click-by-click:
+
+1. `docs/assets/templater/templater-settings.png` — Templater settings with:
+   - Template folder location = `templates`
+   - Trigger on new file creation = On
+2. `docs/assets/templater/folder-templates-mapping.png` — Folder Templates mappings:
+   - `events` → `templates/google-sync/event-template.md`
+   - `tasks` → `templates/google-sync/task-template.md`
+3. `docs/assets/templater/google-sync-folders.png` — Google Sync settings showing:
+   - Events folder = `events`
+   - Tasks folder = `tasks`
+
+Reference them in docs once captured:
+
+```md
+![Templater settings](assets/templater/templater-settings.png)
+![Folder template mappings](assets/templater/folder-templates-mapping.png)
+![Google Sync folder settings](assets/templater/google-sync-folders.png)
 ```
 
 ## Notes
