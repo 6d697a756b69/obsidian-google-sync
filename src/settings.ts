@@ -19,6 +19,7 @@ export interface GoogleSyncSettings {
     syncOnCreate: boolean;
     syncOnModify: boolean;
     syncOnDelete: boolean;
+    importOnlyDefaultCalendar: boolean;
     autoArchiveEnabled: boolean;
     autoArchiveDaysPast: number;
     autoCloseTasksOnArchive: boolean;
@@ -44,6 +45,7 @@ export const DEFAULT_SETTINGS: GoogleSyncSettings = {
     syncOnCreate: true,
     syncOnModify: true,
     syncOnDelete: true,
+    importOnlyDefaultCalendar: true,
     autoArchiveEnabled: true,
     autoArchiveDaysPast: 1,
     autoCloseTasksOnArchive: true,
@@ -232,6 +234,11 @@ export class GoogleSyncSettingTab extends PluginSettingTab {
             "Sync on delete",
             "Delete the Google item when a note is deleted.",
             "syncOnDelete",
+        );
+        this.toggle(
+            "Import only configured calendar",
+            "When importing from Google, only pull events from the default calendar above.",
+            "importOnlyDefaultCalendar",
         );
         this.toggle(
             "Auto-archive past events",

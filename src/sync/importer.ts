@@ -61,6 +61,7 @@ export class GoogleImporter {
 
     private async calendarIds(): Promise<string[]> {
         const s = this.settings();
+        if (s.importOnlyDefaultCalendar) return [s.defaultCalendarId];
         const calendars = await this.calendar.listCalendars();
         const ids = calendars.map((c) => c.id).filter((id): id is string => !!id);
         if (!ids.includes(s.defaultCalendarId)) ids.unshift(s.defaultCalendarId);

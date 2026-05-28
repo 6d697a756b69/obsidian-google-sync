@@ -30,7 +30,12 @@ function install(): void {
         if (method === "DELETE")
             return Promise.resolve({ status: 204, headers, text: "", json: undefined });
         if (req.url.includes("/calendarList"))
-            return ok({ items: [{ id: "primary", primary: true }] });
+            return ok({
+                items: [
+                    { id: "primary", primary: true },
+                    { id: "secondary", summary: "Secondary calendar" },
+                ],
+            });
         if (method === "GET" && req.url.includes("/calendars/primary/events"))
             return ok({
                 items: [
@@ -42,6 +47,17 @@ function install(): void {
                     },
                 ],
                 nextSyncToken: "sync-token",
+            });
+        if (method === "GET" && req.url.includes("/calendars/secondary/events"))
+            return ok({
+                items: [
+                    {
+                        id: "secondary-event-1",
+                        summary: "Secondary appointment",
+                        start: { dateTime: "2026-06-03T09:00:00+12:00", timeZone: "Pacific/Auckland" },
+                        end: { dateTime: "2026-06-03T10:00:00+12:00", timeZone: "Pacific/Auckland" },
+                    },
+                ],
             });
         if (req.url.includes("/users/@me/lists"))
             return ok({
