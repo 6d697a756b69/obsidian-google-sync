@@ -33,7 +33,7 @@ After the plugin is accepted into the community directory:
 2. Go to **Settings → Community plugins**.
 3. Turn off **Restricted mode** if needed.
 4. Select **Browse**.
-5. Search for **Google Calendar/Tasks Sync**.
+5. Search for **Google Calendar and Tasks Sync**.
 6. Select **Install**, then **Enable**.
 
 ### Manual install while waiting for community review
@@ -47,7 +47,7 @@ After the plugin is accepted into the community directory:
 
 3. Put the three downloaded files in that folder.
 4. Restart Obsidian.
-5. Go to **Settings → Community plugins** and enable **Google Calendar/Tasks Sync**.
+5. Go to **Settings → Community plugins** and enable **Google Calendar and Tasks Sync**.
 
 ## First-time setup
 

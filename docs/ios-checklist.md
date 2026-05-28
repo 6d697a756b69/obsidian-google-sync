@@ -9,7 +9,7 @@ After the plugin is accepted into the Obsidian community directory:
 1. Open Obsidian on iOS/iPadOS.
 2. Go to **Settings → Community plugins**.
 3. Select **Browse**.
-4. Search for **Google Calendar/Tasks Sync**.
+4. Search for **Google Calendar and Tasks Sync**.
 5. Select **Install**, then **Enable**.
 
 For manual beta testing before community approval, sync these files into your vault at `.obsidian/plugins/google-sync/`:

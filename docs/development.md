@@ -1,6 +1,6 @@
 # Development
 
-Technical notes for hacking on **Google Calendar/Tasks Sync**.
+Technical notes for hacking on **Google Calendar and Tasks Sync**.
 
 ## Toolchain
 

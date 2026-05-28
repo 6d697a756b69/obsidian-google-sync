@@ -1,6 +1,6 @@
 # Google setup guide
 
-This guide walks through the one-time Google setup for **Google Calendar/Tasks Sync**.
+This guide walks through the one-time Google setup for **Google Calendar and Tasks Sync**.
 
 The plugin uses **your own Google OAuth client**. There is no shared backend service for your calendar/task data: Obsidian talks directly to Google, and OAuth tokens are stored in your vault’s local plugin data.
 
@@ -84,7 +84,7 @@ The bridge does not contain your Google secret and cannot use the authorization 
 
 ## 6. Configure Obsidian
 
-In Obsidian, go to **Settings → Google Calendar/Tasks Sync** and fill in:
+In Obsidian, go to **Settings → Google Calendar and Tasks Sync** and fill in:
 
 - **OAuth client ID** — from Google Cloud.
 - **OAuth client secret** — from Google Cloud.
