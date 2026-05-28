@@ -1,82 +1,84 @@
-# Google Calendar/Tasks Sync (Obsidian plugin)
+# Google Calendar & Tasks Sync for Obsidian
 
-Treats a vault's `events/` and `tasks/` folders as the source of truth and mirrors them to
-**Google Calendar** and **Google Tasks** (Obsidian → Google). Works on **desktop and iOS**.
-See the product spec at `../obsidian-google-sync-spec.md`.
+Keep your Obsidian notes in sync with **Google Calendar** and **Google Tasks** — on your
+computer *and* your iPhone.
 
-## Features
+Write notes the way you normally would. The plugin watches two folders in your vault and
+mirrors them to Google for you:
 
-- **Events** (`events/*.md`): create / edit / delete a note → insert / patch / delete the
-  Google Calendar event. Handles timezones (IANA), all-day events, attendees, recurrence.
-- **Tasks** (`tasks/*.md`): create / edit / delete + completion → Google Tasks.
-- **Lifecycle** (daily): past events → `events/archive/` (and close linked tasks), overdue
-  tasks → `tasks/overdue/`, completed tasks → `tasks/completed/`.
-- **Mobile-safe**: all network via Obsidian `requestUrl` (no CORS issues, no Node deps); all
-  file I/O via the Vault API. OAuth is Authorization Code + PKCE via a self-hosted
-  `obsidian://` bridge, so the same flow works on iOS.
-- Exponential backoff on Google 429/5xx; `googleId` stored in frontmatter as the sync key.
+- 📅 Notes in **`events/`** become Google Calendar events.
+- ✅ Notes in **`tasks/`** become Google Tasks.
 
-## Setup
+Edit a note, the event updates. Delete the note, the event goes away. Tick a task off,
+Google Tasks marks it done.
 
-1. Create a Google OAuth client and host the redirect bridge — see
+## What it does
+
+- **Events** — title, date/time, all-day, time zone, location, attendees, and recurring
+  events all sync to Google Calendar.
+- **Tasks** — title, due date, notes, and completion sync to Google Tasks.
+- **Tidies up after itself** — once a day it moves past events to `events/archive/`,
+  overdue tasks to `tasks/overdue/`, and finished tasks to `tasks/completed/` so your
+  active folders stay clean.
+- **Works on iPhone** — same flow as desktop, including the Google sign-in.
+- **Plays nicely with Google** — backs off and retries when Google is busy, so you don't
+  get errored out.
+
+## Getting started
+
+1. Install the plugin into your vault.
+2. Connect it to your Google account — the one-time setup is in
    [docs/google-setup.md](docs/google-setup.md).
-2. Enter the client ID / secret / bridge URL in plugin settings, run **Connect to Google**.
-3. On iPhone, follow [docs/ios-checklist.md](docs/ios-checklist.md).
+3. In Obsidian, run **Connect to Google** and approve in the browser.
+4. Make a note in `events/` or `tasks/`, then run **Sync now**.
 
-Commands: **Connect to Google**, **Disconnect from Google**, **Sync now**,
-**Run lifecycle scan**, **Test connection**.
+On iPhone, the extra checklist is in [docs/ios-checklist.md](docs/ios-checklist.md).
 
-## Note format
+## Commands you'll use
 
-Frontmatter drives the sync (`title`, `date`/`end`/`allDay`/`timezone`, `location`,
-`attendees`, `recurrence` for events; `title`, `due`, `completed`, `notes` for tasks).
-`googleId` is filled in automatically. Body content stays local to Obsidian.
+Open Obsidian's command palette and search for:
 
-## Toolchain
+- **Connect to Google** — sign in (do this once).
+- **Sync now** — push your latest changes to Google.
+- **Run lifecycle scan** — archive past events and tidy completed/overdue tasks.
+- **Test connection** — quick check that Google is reachable.
+- **Validate setup** — confirms your settings, calendar, and task list all work.
+- **Disconnect from Google** — sign out.
 
-| Concern    | Tool                                                    |
-| ---------- | ------------------------------------------------------- |
-| Bundler    | esbuild (`obsidian`/`electron`/CodeMirror externalized) |
-| Types      | TypeScript (strict-ish, `tsc --noEmit` gate)            |
-| Lint       | ESLint flat config + `eslint-plugin-obsidianmd`         |
-| Format     | Prettier (`npm run format` / `format:check`)            |
-| Unit tests | Mocha + chai (`test/unit/**/*.ts`, run via `tsx`)       |
-| E2E tests  | WebdriverIO + `wdio-obsidian-service` (real Obsidian)   |
+## How a note becomes an event or task
 
-## Commands
+The plugin reads the **frontmatter** at the top of each note (the bit between `---`
+fences). The body of the note stays in Obsidian — only the frontmatter syncs.
 
-```shell
-npm install          # install toolchain
-npm run dev          # esbuild watch -> main.js (use with hot-reload in a dev vault)
-npm run build        # type-check + production bundle
-npm run lint         # eslint
-npm run format       # prettier --write
-npm run format:check # prettier --check
-npm run test:unit    # mocha unit tests
-npm run test:e2e     # wdio e2e against a real (downloaded) Obsidian
-npm test             # unit + e2e
-```
+**Event** (`events/my-meeting.md`):
 
-### E2E on this (headless aarch64) box
-
-`wdio-obsidian-service`/`obsidian-launcher` downloads a sandboxed Obsidian (arm64 build,
-cached in `./.obsidian-cache`) and `@wdio/xvfb` provides a virtual display. Requires the
-system packages installed by `scripts/setup-e2e-deps.sh` (xvfb + Electron runtime libs).
-Pin versions with `OBSIDIAN_VERSIONS`, e.g.:
-
-```shell
-OBSIDIAN_VERSIONS='latest/latest' npm run test:e2e
-```
-
-## Dev loop with hot-reload
-
-A dev vault lives at `../obsidian-google-sync-vault/` with the
-[`hot-reload`](https://github.com/pjeby/hot-reload) plugin installed and this plugin's
-build output symlinked into `.obsidian/plugins/google-sync/`. Run `npm run dev` and edits
-rebuild + reload live.
-
+```yaml
 ---
+title: Coffee with Alex
+date: 2026-06-02T10:00
+end: 2026-06-02T11:00
+timezone: Pacific/Auckland
+location: Wellington
+attendees:
+    - alex@example.com
+---
+Notes for myself stay here, in Obsidian.
+```
 
-Scaffolded from
-[`wdio-obsidian-service-sample-plugin`](https://github.com/jesse-r-s-hines/wdio-obsidian-service-sample-plugin),
-itself based on the [official Obsidian sample plugin](https://github.com/obsidianmd/obsidian-sample-plugin).
+**Task** (`tasks/buy-milk.md`):
+
+```yaml
+---
+title: Buy milk
+due: 2026-06-01
+completed: false
+---
+```
+
+After the first sync, a `googleId` field appears in the frontmatter — that's how the
+plugin knows which Google event/task this note belongs to. Leave it alone.
+
+## For developers
+
+Toolchain, build scripts, tests, and architecture notes live in
+[docs/development.md](docs/development.md).
