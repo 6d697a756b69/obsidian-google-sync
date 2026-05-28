@@ -31,11 +31,34 @@ function install(): void {
             return Promise.resolve({ status: 204, headers, text: "", json: undefined });
         if (req.url.includes("/calendarList"))
             return ok({ items: [{ id: "primary", primary: true }] });
+        if (method === "GET" && req.url.includes("/calendars/primary/events"))
+            return ok({
+                items: [
+                    {
+                        id: "import-event-1",
+                        summary: "Imported appointment",
+                        start: { dateTime: "2026-06-02T09:00:00+12:00", timeZone: "Pacific/Auckland" },
+                        end: { dateTime: "2026-06-02T10:00:00+12:00", timeZone: "Pacific/Auckland" },
+                    },
+                ],
+                nextSyncToken: "sync-token",
+            });
         if (req.url.includes("/users/@me/lists"))
             return ok({
                 items: [
                     { id: "@default", title: "My Tasks" },
                     { id: "L1", title: "Test list" },
+                ],
+            });
+        if (method === "GET" && req.url.includes("/lists/L1/tasks"))
+            return ok({
+                items: [
+                    {
+                        id: "import-task-1",
+                        title: "Imported task",
+                        due: "2026-06-01T00:00:00.000Z",
+                        status: "needsAction",
+                    },
                 ],
             });
         if (req.url.includes("oauth2.googleapis.com/token"))

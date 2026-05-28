@@ -11,6 +11,26 @@ export interface CalendarListEntry {
     primary?: boolean;
 }
 
+export interface ListEventsOptions {
+    syncToken?: string;
+    timeMin?: string;
+    timeMax?: string;
+    pageSize?: number;
+}
+
+export interface ListEventsResult {
+    items: GoogleEvent[];
+    nextSyncToken?: string;
+}
+
+function addQuery(url: string, params: Record<string, string | number | boolean | undefined>): string {
+    const query = Object.entries(params)
+        .filter((entry): entry is [string, string | number | boolean] => entry[1] !== undefined)
+        .map(([key, value]) => `${enc(key)}=${enc(String(value))}`)
+        .join("&");
+    return query ? `${url}?${query}` : url;
+}
+
 /** Thin Google Calendar v3 client over an injectable transport. */
 export class GoogleCalendarClient {
     constructor(
@@ -55,5 +75,36 @@ export class GoogleCalendarClient {
             items?: CalendarListEntry[];
         };
         return r.items ?? [];
+    }
+
+    async listEvents(
+        calendarId: string,
+        options: ListEventsOptions = {},
+    ): Promise<ListEventsResult> {
+        const items: GoogleEvent[] = [];
+        let pageToken: string | undefined;
+        let nextSyncToken: string | undefined;
+
+        do {
+            const url = addQuery(`${BASE}/calendars/${enc(calendarId)}/events`, {
+                singleEvents: true,
+                showDeleted: true,
+                maxResults: options.pageSize,
+                syncToken: options.syncToken,
+                timeMin: options.timeMin,
+                timeMax: options.timeMax,
+                pageToken,
+            });
+            const r = (await this.call({ method: "GET", url })) as {
+                items?: GoogleEvent[];
+                nextPageToken?: string;
+                nextSyncToken?: string;
+            };
+            items.push(...(r.items ?? []));
+            pageToken = r.nextPageToken;
+            nextSyncToken = r.nextSyncToken ?? nextSyncToken;
+        } while (pageToken);
+
+        return { items, nextSyncToken };
     }
 }

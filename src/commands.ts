@@ -19,6 +19,11 @@ export function registerCommands(plugin: GoogleSyncPlugin): void {
         callback: () => void plugin.syncNow(),
     });
     plugin.addCommand({
+        id: "import-from-google",
+        name: "Import events and tasks from Google",
+        callback: () => void plugin.importFromGoogle(),
+    });
+    plugin.addCommand({
         id: "run-lifecycle",
         name: "Run lifecycle scan",
         callback: () => void plugin.runLifecycle(true),

@@ -10,6 +10,18 @@ export interface TaskListEntry {
     title?: string;
 }
 
+export interface ListTasksOptions {
+    pageSize?: number;
+}
+
+function addQuery(url: string, params: Record<string, string | number | boolean | undefined>): string {
+    const query = Object.entries(params)
+        .filter((entry): entry is [string, string | number | boolean] => entry[1] !== undefined)
+        .map(([key, value]) => `${enc(key)}=${enc(String(value))}`)
+        .join("&");
+    return query ? `${url}?${query}` : url;
+}
+
 /** Thin Google Tasks v1 client over an injectable transport. */
 export class GoogleTasksClient {
     constructor(
@@ -27,6 +39,28 @@ export class GoogleTasksClient {
             items?: TaskListEntry[];
         };
         return r.items ?? [];
+    }
+
+    async listTasks(taskListId: string, options: ListTasksOptions = {}): Promise<GoogleTask[]> {
+        const items: GoogleTask[] = [];
+        let pageToken: string | undefined;
+
+        do {
+            const url = addQuery(`${BASE}/lists/${enc(taskListId)}/tasks`, {
+                showCompleted: true,
+                showHidden: true,
+                maxResults: options.pageSize,
+                pageToken,
+            });
+            const r = (await this.call({ method: "GET", url })) as {
+                items?: GoogleTask[];
+                nextPageToken?: string;
+            };
+            items.push(...(r.items ?? []));
+            pageToken = r.nextPageToken;
+        } while (pageToken);
+
+        return items;
     }
 
     async insertTask(taskListId: string, task: GoogleTask): Promise<GoogleTask> {

@@ -42,3 +42,47 @@ export function taskToGoogle(fm: TaskFrontmatter, defaultTz: string): GoogleTask
     task.status = fm.completed ? "completed" : "needsAction";
     return task;
 }
+
+/** Map a Google Calendar event into event note frontmatter. Pure. */
+export function remoteEventToNote(event: GoogleEvent, calendarId: string): EventFrontmatter {
+    const start = event.start;
+    const end = event.end;
+    const fm: EventFrontmatter = {
+        title: event.summary || "Untitled event",
+        calendarId,
+    };
+
+    if (event.id) fm.googleId = event.id;
+    if (start?.date) {
+        fm.date = start.date;
+        fm.allDay = true;
+    } else if (start?.dateTime) {
+        fm.date = start.dateTime;
+    }
+    if (end?.date) fm.end = end.date;
+    else if (end?.dateTime) fm.end = end.dateTime;
+    if (start?.timeZone || end?.timeZone) fm.timezone = start?.timeZone || end?.timeZone;
+    if (event.location != null) fm.location = event.location;
+    if (event.description != null) fm.description = event.description;
+    if (event.status != null) fm.status = event.status;
+    if (event.recurrence?.[0]) fm.recurrence = event.recurrence[0];
+
+    const required = event.attendees?.filter((a) => !a.optional).map((a) => a.email) ?? [];
+    const optional = event.attendees?.filter((a) => a.optional).map((a) => a.email) ?? [];
+    if (required.length || optional.length) fm.attendees = { required, optional };
+
+    return fm;
+}
+
+/** Map a Google Tasks item into task note frontmatter. Pure. */
+export function remoteTaskToNote(task: GoogleTask): TaskFrontmatter {
+    const fm: TaskFrontmatter = {
+        title: task.title || "Untitled task",
+        completed: task.status === "completed",
+        status: task.status || "needsAction",
+    };
+    if (task.id) fm.googleId = task.id;
+    if (task.due) fm.due = task.due;
+    if (task.notes != null) fm.notes = task.notes;
+    return fm;
+}

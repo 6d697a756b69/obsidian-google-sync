@@ -7,6 +7,7 @@ import { CalendarListEntry, GoogleCalendarClient } from "./google/calendar";
 import { GoogleTasksClient, TaskListEntry } from "./google/tasks";
 import { SyncRouter } from "./sync/router";
 import { Lifecycle } from "./sync/lifecycle";
+import { GoogleImporter } from "./sync/importer";
 import { registerCommands } from "./commands";
 
 interface PersistedData {
@@ -32,6 +33,7 @@ export default class GoogleSyncPlugin extends Plugin {
     private tasks!: GoogleTasksClient;
     private router!: SyncRouter;
     private lifecycle!: Lifecycle;
+    private importer!: GoogleImporter;
     private lastLifecycleRun = 0;
     private timers = new Map<string, number>();
     private settingsSaveTimer: number | null = null;
@@ -52,6 +54,7 @@ export default class GoogleSyncPlugin extends Plugin {
         this.tasks = new GoogleTasksClient(http, tokenProvider);
         this.router = new SyncRouter(this.app, this.calendar, this.tasks, () => this.settings);
         this.lifecycle = new Lifecycle(this.app, this.tasks, () => this.settings);
+        this.importer = new GoogleImporter(this.app, this.calendar, this.tasks, () => this.settings);
 
         this.addSettingTab(new GoogleSyncSettingTab(this.app, this));
         registerCommands(this);
@@ -247,6 +250,24 @@ export default class GoogleSyncPlugin extends Plugin {
             );
         } catch (e) {
             new Notice(`google-sync error: ${(e as Error).message}`);
+        }
+    }
+
+    async importFromGoogle(): Promise<void> {
+        if (!(await this.auth.isConnected())) {
+            new Notice("Connect to Google first.");
+            return;
+        }
+        try {
+            const { events, tasks, failed } = await this.importer.importAll();
+            this.router.buildIndex();
+            new Notice(
+                failed > 0
+                    ? `google-sync: imported ${events} event(s), ${tasks} task(s), ${failed} failed.`
+                    : `google-sync: imported ${events} event(s) and ${tasks} task(s).`,
+            );
+        } catch (e) {
+            new Notice(`google-sync import error: ${(e as Error).message}`);
         }
     }
 

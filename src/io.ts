@@ -1,4 +1,4 @@
-import { App, TFile, normalizePath, parseYaml } from "obsidian";
+import { App, TFile, normalizePath, parseYaml, stringifyYaml } from "obsidian";
 
 /**
  * Obsidian Vault file helpers. Mobile-safe (Vault API + fileManager only, no Node fs).
@@ -27,6 +27,36 @@ export async function writeFrontmatterKey(
     await app.fileManager.processFrontMatter(file, (fm: Record<string, unknown>) => {
         fm[key] = value;
     });
+}
+
+export async function writeFrontmatter(
+    app: App,
+    file: TFile,
+    frontmatter: Record<string, unknown>,
+): Promise<void> {
+    const content = await app.vault.read(file);
+    const body = content.replace(FRONTMATTER_RE, "").replace(/^\n+/, "");
+    await app.vault.modify(file, `---\n${stringifyYaml(frontmatter)}---\n${body}`);
+}
+
+export async function upsertMarkdownFile(
+    app: App,
+    path: string,
+    frontmatter: Record<string, unknown>,
+    body = "",
+): Promise<TFile> {
+    const normalized = normalizePath(path);
+    const dir = normalized.split("/").slice(0, -1).join("/");
+    if (dir && !app.vault.getAbstractFileByPath(dir)) {
+        await app.vault.createFolder(dir).catch(() => undefined);
+    }
+    const content = `---\n${stringifyYaml(frontmatter)}---\n${body}`;
+    const existing = app.vault.getAbstractFileByPath(normalized);
+    if (existing instanceof TFile) {
+        await app.vault.modify(existing, content);
+        return existing;
+    }
+    return app.vault.create(normalized, content);
 }
 
 /** Move a note to newPath, creating the parent folder if needed. Returns the moved file. */

@@ -40,6 +40,7 @@ Open Obsidian's command palette and search for:
 
 - **Connect to Google** — sign in (do this once).
 - **Sync now** — push your latest changes to Google.
+- **Import events and tasks from Google** — pull all visible Google Calendar events and Google Tasks into your vault folders.
 - **Run lifecycle scan** — archive past events and tidy completed/overdue tasks.
 - **Test connection** — quick check that Google is reachable.
 - **Validate setup** — confirms your settings, calendar, and task list all work.
