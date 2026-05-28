@@ -174,10 +174,7 @@ export default class GoogleSyncPlugin extends Plugin {
      * (which deadlocks Obsidian's renderer in 1.12.x when the Setting has child controls).
      */
     isConnectedSync(): boolean {
-        return (
-            !!this.tokens?.refreshToken ||
-            (!!this.tokens && this.tokens.expiresAt > Date.now())
-        );
+        return !!this.tokens?.refreshToken || (!!this.tokens && this.tokens.expiresAt > Date.now());
     }
 
     listCalendars(): Promise<CalendarListEntry[]> {

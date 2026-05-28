@@ -49,8 +49,8 @@ describe("settings tab (UI)", function () {
             try {
                 tab.display();
                 const ms = performance.now() - start;
-                const labels = Array.from(div.querySelectorAll(".setting-item-name")).map(
-                    (n) => (n.textContent ?? "").trim(),
+                const labels = Array.from(div.querySelectorAll(".setting-item-name")).map((n) =>
+                    (n.textContent ?? "").trim(),
                 );
                 return {
                     ok: true as const,
@@ -93,9 +93,8 @@ describe("settings tab (UI)", function () {
 
     it("scheduleSaveSettings() coalesces 30 keystrokes into one disk write", async () => {
         const r = await browser.executeObsidian(async ({ app }) => {
-            const plugin = (
-                app as unknown as { plugins: { plugins: Record<string, PluginShape> } }
-            ).plugins.plugins["google-sync"];
+            const plugin = (app as unknown as { plugins: { plugins: Record<string, PluginShape> } })
+                .plugins.plugins["google-sync"];
             if (!plugin) return { ok: false as const, reason: "plugin not found" };
 
             const realSave = plugin.saveData.bind(plugin);
@@ -143,8 +142,8 @@ describe("settings tab (UI)", function () {
             tab.containerEl = div;
             try {
                 tab.display();
-                const labels = Array.from(div.querySelectorAll(".setting-item-name")).map(
-                    (n) => (n.textContent ?? "").trim(),
+                const labels = Array.from(div.querySelectorAll(".setting-item-name")).map((n) =>
+                    (n.textContent ?? "").trim(),
                 );
                 const idx = labels.findIndex((l) => l === "OAuth client ID");
                 if (idx < 0) return { ok: false as const, reason: "no clientId input" };
@@ -178,7 +177,6 @@ describe("settings tab (UI)", function () {
         // If we can't trigger Obsidian's onChange via synthetic events, skip the assertion —
         // the display() and debounce tests above already cover the user-impacting code path.
         if (r.stored === "") {
-            // eslint-disable-next-line no-console
             console.warn(
                 "[settings-tab.e2e] synthetic input event didn't propagate to onChange; this is a test-harness limitation, not a plugin bug. inputValue =",
                 r.inputValue,

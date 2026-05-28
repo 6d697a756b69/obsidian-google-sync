@@ -145,9 +145,7 @@ export class GoogleSyncSettingTab extends PluginSettingTab {
             // the user (and the console) gets a clear signal instead of a frozen UI.
             console.error("[google-sync] settings render failed:", e);
             this.containerEl.empty();
-            this.containerEl.createEl("h3", {
-                text: "Google Sync — settings failed to load",
-            });
+            new Setting(this.containerEl).setName("Google sync failed to load").setHeading();
             this.containerEl.createEl("p", {
                 text: `${(e as Error).message}. See the developer console for details.`,
             });
