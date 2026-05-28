@@ -22,9 +22,16 @@ static bridge page you host. This works on desktop **and** iOS.
 
 1. Deploy [`bridge/index.html`](../bridge/index.html) to any static host you control —
    GitHub Pages, Cloudflare Pages, or Netlify all work and are free.
+    - **Easiest (GitHub Pages):** this repo ships a **Deploy OAuth bridge to Pages** workflow
+      (`.github/workflows/deploy-bridge.yaml`). In your repo, set **Settings → Pages → Source =
+      GitHub Actions**, then push (or run the workflow manually); it publishes `bridge/`
+      automatically.
 2. Note its public URL, e.g. `https://you.github.io/obsidian-google-sync/` (this is your
    **redirect bridge URL**). The page only forwards a single-use code to
    `obsidian://google-sync`; with PKCE it can't use the code, so a static/shared host is safe.
+
+After connecting, run the **Validate setup** command in Obsidian to confirm credentials,
+connection, and that your chosen calendar + task list are reachable.
 
 ## 4. Create the OAuth client
 

@@ -6,6 +6,7 @@ import { setupGoogleSyncMock } from "./helpers/mockGoogle";
 interface PluginApi {
     listCalendars(): Promise<{ id: string }[]>;
     listTaskLists(): Promise<{ id: string }[]>;
+    validateSetup(): Promise<string>;
 }
 
 describe("settings pickers data (mocked Google)", function () {
@@ -23,5 +24,17 @@ describe("settings pickers data (mocked Google)", function () {
         });
         expect(result.calendars).to.include("primary");
         expect(result.taskLists).to.include("@default");
+    });
+
+    it("reports a healthy setup from validateSetup", async () => {
+        const report = await browser.executeObsidian(async ({ app }) => {
+            const plugin = (app as unknown as { plugins: { plugins: Record<string, unknown> } })
+                .plugins.plugins["google-sync"] as PluginApi;
+            return plugin.validateSetup();
+        });
+        expect(report).to.contain("connected to Google");
+        expect(report).to.contain("calendar");
+        expect(report).to.contain("task list");
+        expect(report).to.not.contain("[--]");
     });
 });

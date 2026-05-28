@@ -141,6 +141,44 @@ export default class GoogleSyncPlugin extends Plugin {
         return this.tasks.listTaskLists();
     }
 
+    /** Full preflight the user can run to verify real-account wiring end to end. */
+    async validateSetup(): Promise<string> {
+        const s = this.settings;
+        const lines: string[] = [];
+        const mark = (ok: boolean, label: string) => lines.push(`${ok ? "[ok]" : "[--]"} ${label}`);
+
+        mark(!!s.clientId, "OAuth client ID");
+        mark(!!s.clientSecret, "OAuth client secret");
+        mark(!!s.redirectUri, "redirect bridge URL");
+
+        const connected = await this.auth.isConnected();
+        mark(
+            connected,
+            connected ? "connected to Google" : "not connected (run Connect to Google)",
+        );
+
+        if (connected) {
+            try {
+                const cals = await this.calendar.listCalendars();
+                const found =
+                    s.defaultCalendarId === "primary" ||
+                    cals.some((c) => c.id === s.defaultCalendarId);
+                mark(found, `calendar "${s.defaultCalendarId}" among ${cals.length} found`);
+            } catch (e) {
+                mark(false, `calendar check failed: ${(e as Error).message}`);
+            }
+            try {
+                const lists = await this.tasks.listTaskLists();
+                const found =
+                    s.taskListId === "@default" || lists.some((l) => l.id === s.taskListId);
+                mark(found, `task list "${s.taskListId}" among ${lists.length} found`);
+            } catch (e) {
+                mark(false, `task list check failed: ${(e as Error).message}`);
+            }
+        }
+        return lines.join("\n");
+    }
+
     async testConnection(): Promise<string> {
         try {
             await this.auth.getAccessToken();

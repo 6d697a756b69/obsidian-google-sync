@@ -30,4 +30,11 @@ export function registerCommands(plugin: GoogleSyncPlugin): void {
             new Notice(await plugin.testConnection());
         },
     });
+    plugin.addCommand({
+        id: "validate-setup",
+        name: "Validate setup",
+        callback: async () => {
+            new Notice(await plugin.validateSetup(), 12000);
+        },
+    });
 }

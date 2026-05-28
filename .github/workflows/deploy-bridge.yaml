@@ -1,0 +1,38 @@
+name: Deploy OAuth bridge to Pages
+
+# Publishes bridge/ (the obsidian:// OAuth redirect page) to GitHub Pages.
+# One-time setup: repo Settings -> Pages -> Build and deployment -> Source = "GitHub Actions".
+# The published URL (e.g. https://<user>.github.io/<repo>/) is your redirect bridge URL —
+# register it in your Google "Web application" OAuth client and in the plugin settings.
+
+on:
+    push:
+        branches: [main]
+        paths:
+            - "bridge/**"
+            - ".github/workflows/deploy-bridge.yaml"
+    workflow_dispatch:
+
+permissions:
+    contents: read
+    pages: write
+    id-token: write
+
+concurrency:
+    group: pages
+    cancel-in-progress: true
+
+jobs:
+    deploy:
+        environment:
+            name: github-pages
+            url: ${{ steps.deployment.outputs.page_url }}
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/configure-pages@v5
+            - uses: actions/upload-pages-artifact@v3
+              with:
+                  path: bridge
+            - id: deployment
+              uses: actions/deploy-pages@v4

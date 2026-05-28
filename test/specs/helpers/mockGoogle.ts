@@ -32,7 +32,12 @@ function install(): void {
         if (req.url.includes("/calendarList"))
             return ok({ items: [{ id: "primary", primary: true }] });
         if (req.url.includes("/users/@me/lists"))
-            return ok({ items: [{ id: "@default", title: "My Tasks" }] });
+            return ok({
+                items: [
+                    { id: "@default", title: "My Tasks" },
+                    { id: "L1", title: "Test list" },
+                ],
+            });
         if (req.url.includes("oauth2.googleapis.com/token"))
             return ok({ access_token: "e2e", expires_in: 3600, refresh_token: "rt" });
         if (method === "POST") return ok({ id: `mock-${++seq}` });
@@ -46,11 +51,14 @@ async function seedAndConfigure({ app }: { app: unknown }): Promise<void> {
     const plugin = (app as { plugins: { plugins: Record<string, unknown> } }).plugins.plugins[
         "google-sync"
     ] as {
-        settings: { taskListId: string };
+        settings: Record<string, unknown>;
         saveSettings(): Promise<void>;
         e2eSeedToken(): Promise<void>;
     };
     await plugin.e2eSeedToken();
+    plugin.settings.clientId = "e2e-client";
+    plugin.settings.clientSecret = "e2e-secret";
+    plugin.settings.redirectUri = "https://bridge.example/callback";
     plugin.settings.taskListId = "L1";
     await plugin.saveSettings();
 }
