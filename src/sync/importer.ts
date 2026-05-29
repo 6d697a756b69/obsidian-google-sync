@@ -4,7 +4,7 @@ import { GoogleTasksClient } from "../google/tasks";
 import { GoogleSyncSettings } from "../settings";
 import { GoogleEvent, GoogleTask } from "../types";
 import { readFrontmatter, upsertMarkdownFile, writeFrontmatter } from "../io";
-import { remoteEventToNote, remoteTaskToNote } from "./mapper";
+import { mergeManagedFrontmatter, remoteEventToNote, remoteTaskToNote } from "./mapper";
 import { isEventAllowed } from "./recurrence";
 
 export interface ImportCounts {
@@ -169,7 +169,12 @@ export class GoogleImporter {
             const existing = await findByGoogleId(this.app, s.eventsFolder, event.id);
             if (existing) {
                 if (options.createOnly) return;
-                await writeFrontmatter(this.app, existing, fm);
+                const merged = mergeManagedFrontmatter(
+                    await readFrontmatter(this.app, existing),
+                    fm,
+                    "event",
+                );
+                await writeFrontmatter(this.app, existing, merged);
                 this.onTouch(existing.path);
             } else {
                 const path = await pathFor(
@@ -217,7 +222,12 @@ export class GoogleImporter {
             const existing = await findByGoogleId(this.app, this.settings().tasksFolder, task.id);
             if (existing) {
                 if (options.createOnly) return;
-                await writeFrontmatter(this.app, existing, fm);
+                const merged = mergeManagedFrontmatter(
+                    await readFrontmatter(this.app, existing),
+                    fm,
+                    "task",
+                );
+                await writeFrontmatter(this.app, existing, merged);
                 this.onTouch(existing.path);
             } else {
                 const path = await pathFor(

@@ -170,6 +170,23 @@ Optional task notes go here.
 
 Set `completed: true` and sync to mark the task completed in Google Tasks.
 
+## Linking tasks to events
+
+You can link task notes to an event so they are completed in Google Tasks automatically when the event passes (and gets archived). On the **event** note, add a `tasks:` list:
+
+```yaml
+tasks:
+    - "[[Pack bags for malaysia]]"
+    - "[[Buy travel adapter]]"
+```
+
+Entries can be Obsidian wikilinks (so they also show up in the graph) or plain note basenames — both work. When the event is archived (its date is more than the configured days in the past), each linked task is marked completed in Google Tasks. Requires **Auto-archive past events** and **Auto-close linked tasks on archive** to be on.
+
+## Obsidian-friendly notes
+
+- Notes use standard YAML frontmatter (Obsidian **Properties**) plus a Markdown body, so wiki links, tags, and embeds work normally.
+- **Importing from Google is non-destructive to your own metadata.** It updates only the fields it manages (title, date, due, etc.); the note body and any extra properties you add (tags, `[[wiki links]]`, your own fields, the event `tasks` list) are preserved across re-imports.
+
 ## Privacy and safety
 
 - The plugin talks directly to Google Calendar and Google Tasks using Obsidian’s `requestUrl` API.

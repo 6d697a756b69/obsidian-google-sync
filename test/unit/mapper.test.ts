@@ -1,6 +1,6 @@
 import { describe, it } from "mocha";
 import { expect } from "chai";
-import { eventToGoogle, taskToGoogle } from "../../src/sync/mapper";
+import { eventToGoogle, mergeManagedFrontmatter, taskToGoogle } from "../../src/sync/mapper";
 import { EventFrontmatter, TaskFrontmatter } from "../../src/types";
 
 const NZ = "Pacific/Auckland";
@@ -69,5 +69,53 @@ describe("taskToGoogle", () => {
         const t = taskToGoogle({ title: "Done", completed: true }, NZ);
         expect(t.status).to.equal("completed");
         expect(t.due).to.equal(undefined);
+    });
+});
+
+describe("mergeManagedFrontmatter", () => {
+    it("preserves user keys while taking managed keys from Google (task)", () => {
+        const existing = {
+            title: "old title",
+            due: "2026-06-01",
+            completed: false,
+            googleId: "t1",
+            related: "[[Some concept]]",
+            tags: ["wiki", "setup"],
+        };
+        const incoming = {
+            title: "Set up promptfoo/promptfoo",
+            completed: false,
+            status: "needsAction",
+            googleId: "t1",
+        };
+        const merged = mergeManagedFrontmatter(existing, incoming, "task");
+        // managed: taken from Google, including the now-removed `due`
+        expect(merged.title).to.equal("Set up promptfoo/promptfoo");
+        expect(merged.due).to.equal(undefined);
+        expect(merged.status).to.equal("needsAction");
+        // unmanaged: preserved
+        expect(merged.related).to.equal("[[Some concept]]");
+        expect(merged.tags).to.deep.equal(["wiki", "setup"]);
+    });
+
+    it("preserves the event `tasks` link field and other user keys across import", () => {
+        const existing = {
+            title: "Flight",
+            date: "2026-06-01T09:00",
+            googleId: "e1",
+            tasks: ["[[Pack bags for malaysia]]"],
+            project: "[[Malaysia trip]]",
+        };
+        const incoming = {
+            title: "Flight to KL",
+            date: "2026-06-01T13:00",
+            googleId: "e1",
+            calendarId: "primary",
+        };
+        const merged = mergeManagedFrontmatter(existing, incoming, "event");
+        expect(merged.title).to.equal("Flight to KL");
+        expect(merged.date).to.equal("2026-06-01T13:00");
+        expect(merged.tasks).to.deep.equal(["[[Pack bags for malaysia]]"]);
+        expect(merged.project).to.equal("[[Malaysia trip]]");
     });
 });

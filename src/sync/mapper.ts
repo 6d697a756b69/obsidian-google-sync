@@ -74,6 +74,54 @@ export function remoteEventToNote(event: GoogleEvent, calendarId: string): Event
     return fm;
 }
 
+/**
+ * Frontmatter keys the plugin owns for each note kind. On import these are taken
+ * authoritatively from Google (so Google can set *or clear* them); every other key —
+ * user-authored properties, tags, wiki links, the event `tasks` link field — is preserved.
+ */
+export const EVENT_MANAGED_KEYS = [
+    "title",
+    "calendarId",
+    "googleId",
+    "date",
+    "allDay",
+    "end",
+    "timezone",
+    "location",
+    "description",
+    "status",
+    "recurrence",
+    "attendees",
+] as const;
+
+export const TASK_MANAGED_KEYS = [
+    "title",
+    "completed",
+    "status",
+    "googleId",
+    "tasklist",
+    "due",
+    "notes",
+] as const;
+
+/**
+ * Merge Google-derived frontmatter onto an existing note. Managed keys come from
+ * `incoming` (Google is the source of truth, including removals); any other key in
+ * `existing` is kept, so a re-import no longer wipes user-added properties. Pure.
+ */
+export function mergeManagedFrontmatter(
+    existing: Record<string, unknown>,
+    incoming: Record<string, unknown>,
+    kind: "event" | "task",
+): Record<string, unknown> {
+    const managed: readonly string[] = kind === "event" ? EVENT_MANAGED_KEYS : TASK_MANAGED_KEYS;
+    const preserved: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(existing)) {
+        if (!managed.includes(k)) preserved[k] = v;
+    }
+    return { ...incoming, ...preserved };
+}
+
 /** Map a Google Tasks item into task note frontmatter. Pure. */
 export function remoteTaskToNote(task: GoogleTask, taskListId?: string): TaskFrontmatter {
     const fm: TaskFrontmatter = {

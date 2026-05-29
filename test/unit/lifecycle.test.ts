@@ -1,7 +1,12 @@
 import { describe, it } from "mocha";
 import { expect } from "chai";
 import { DateTime } from "luxon";
-import { LifecycleConfig, LifecycleNote, planLifecycle } from "../../src/sync/lifecycle-plan";
+import {
+    LifecycleConfig,
+    LifecycleNote,
+    linkToBasename,
+    planLifecycle,
+} from "../../src/sync/lifecycle-plan";
 
 const NZ = "Pacific/Auckland";
 const now = DateTime.fromISO("2026-05-28T12:00:00", { zone: NZ });
@@ -77,5 +82,41 @@ describe("planLifecycle", () => {
     it("leaves a future incomplete task alone", () => {
         const notes = [task("tasks/future.md", { title: "Future", due: "2026-05-30T09:00:00" })];
         expect(planLifecycle(notes, cfg, now)).to.have.length(0);
+    });
+
+    it("resolves wikilink `tasks:` entries to bare basenames for closing", () => {
+        const notes = [
+            event("events/old.md", {
+                title: "Old",
+                date: "2026-05-25T09:00:00",
+                tasks: [
+                    "[[Pack bags for malaysia]]",
+                    "[[tasks/Buy milk|milk]]",
+                    "[[Notes#section]]",
+                    "plain-basename",
+                ],
+            }),
+        ];
+        const actions = planLifecycle(notes, cfg, now);
+        expect(actions[0]?.closeTasks).to.deep.equal([
+            "Pack bags for malaysia",
+            "Buy milk",
+            "Notes",
+            "plain-basename",
+        ]);
+    });
+});
+
+describe("linkToBasename", () => {
+    it("passes plain basenames through unchanged", () => {
+        expect(linkToBasename("buy-milk")).to.equal("buy-milk");
+        expect(linkToBasename("  Pack bags  ")).to.equal("Pack bags");
+    });
+    it("strips wikilink brackets, paths, aliases, headings, and extensions", () => {
+        expect(linkToBasename("[[Buy milk]]")).to.equal("Buy milk");
+        expect(linkToBasename("[[tasks/Buy milk]]")).to.equal("Buy milk");
+        expect(linkToBasename("[[Buy milk|the milk]]")).to.equal("Buy milk");
+        expect(linkToBasename("[[Buy milk#later]]")).to.equal("Buy milk");
+        expect(linkToBasename("[[folder/Buy milk.md|x]]")).to.equal("Buy milk");
     });
 });

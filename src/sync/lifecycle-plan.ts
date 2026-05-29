@@ -34,6 +34,21 @@ function dest(folder: string, sub: string, basename: string): string {
 }
 
 /**
+ * Normalize a `tasks:` entry to a bare task-note basename. Accepts a plain basename
+ * ("buy-milk") or an Obsidian wikilink ("[[folder/Buy milk|alias]]", "[[Buy milk#x]]")
+ * and returns the target note name ("Buy milk") — so event→task links can be real
+ * wikilinks that also render in the graph while still driving auto-close.
+ */
+export function linkToBasename(raw: string): string {
+    let s = raw.trim();
+    const m = s.match(/^\[\[(.+?)\]\]$/);
+    if (m && m[1]) s = m[1];
+    s = (s.split("|")[0] ?? "").split("#")[0]?.trim() ?? "";
+    const seg = s.split("/").pop() ?? s;
+    return seg.replace(/\.md$/i, "").trim();
+}
+
+/**
  * Decide which notes should move (and which linked tasks to close). Inputs must be
  * top-level notes (callers exclude archive/overdue/completed subfolders). `now` is injected
  * for deterministic tests.
@@ -58,7 +73,10 @@ export function planLifecycle(
             const linked = note.fm.tasks;
             const closeTasks =
                 cfg.autoCloseTasksOnArchive && Array.isArray(linked)
-                    ? linked.filter((t): t is string => typeof t === "string")
+                    ? linked
+                          .filter((t): t is string => typeof t === "string")
+                          .map(linkToBasename)
+                          .filter((t) => t.length > 0)
                     : [];
             actions.push({
                 path: note.path,
