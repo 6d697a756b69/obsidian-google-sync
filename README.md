@@ -23,6 +23,18 @@ This is intentionally conservative so it does not destroy local edits:
 
 If you need a full two-way merge workflow, test carefully with a spare calendar/list first.
 
+## Import settings
+
+When pulling from Google (manual import or import-on-startup), these settings keep the volume sane and stop your vault filling with thousands of notes:
+
+- **Import window — days past / days ahead:** only events inside this window are imported. Defaults are **7 days past** and **90 days ahead**. Recurring events are expanded into one note per occurrence, so a wide window pulls a lot of notes — widen it deliberately.
+- **Recurring event filter:** controls which repeating events (lectures, standups, weekly 1:1s) get imported. One-off events are always imported.
+    - **Allowlist** (default): import only recurring events whose title matches one of your patterns. An **empty allowlist imports no recurring events** — this is the strict default, so add titles to opt them in.
+    - **Blocklist:** import every recurring event _except_ those whose title matches. An empty blocklist imports them all.
+- **Recurring event titles:** one title per line, with `*` as a wildcard (e.g. `Weekly*`, `Standup*`). Used by whichever mode is selected above. Matching is case-insensitive.
+
+These only affect what is _imported from_ Google. Notes you author locally always sync up regardless of these settings.
+
 ## Install
 
 ### From Obsidian Community Plugins
@@ -85,6 +97,7 @@ If you use the **Templater** community plugin, you can auto-insert valid event/t
 This creates event/task templates and can auto-configure Templater’s template folder + trigger-on-create setting.
 
 Then add folder mappings in Obsidian Templater:
+
 - `events` → `templates/google-sync/event-template.md`
 - `tasks` → `templates/google-sync/task-template.md`
 
@@ -103,7 +116,7 @@ Open Obsidian’s command palette and search for these commands:
 
 - **Connect to Google** — sign in once and store Google tokens in the plugin data file.
 - **Sync now** — push matching Obsidian notes to Google.
-- **Import events and tasks from Google** — pull Google items into your vault. By default it only imports the configured calendar and task list to avoid vault spam.
+- **Import events and tasks from Google** — pull Google items into your vault. By default it only imports the configured calendar and task list, within the import window, to avoid vault spam. Recurring events are filtered by the allowlist/blocklist (see [Import settings](#import-settings)).
 - **Run lifecycle scan** — move past events to `events/archive/`, overdue tasks to `tasks/overdue/`, and completed tasks to `tasks/completed/`.
 - **Test connection** — quick Google connectivity check.
 - **Validate setup** — checks OAuth settings, Google connection, selected calendar, and selected task list.
@@ -173,7 +186,9 @@ Set `completed: true` and sync to mark the task completed in Google Tasks.
 - Run **Validate setup** first. It gives the clearest checklist of what is missing.
 - If login does not return to Obsidian, check that your Google OAuth redirect URI exactly matches your hosted bridge URL.
 - If a note does not sync, check that it is under the configured `events/` or `tasks/` folder and has the required frontmatter fields.
-- If times look wrong, add an explicit `timezone` such as `Pacific/Auckland`.
+- If event times look wrong, add an explicit `timezone` such as `Pacific/Auckland`.
+- Task `due` dates are date-only in Google Tasks. The plugin preserves the calendar date you set (no off-by-one in timezones ahead of UTC); upgrade to 0.1.13+ if "due tomorrow" ever showed as today.
+- If imported notes get overwritten back to a template (e.g. `title: Event title`), see the Templater warning in the [Templater setup guide](https://github.com/Cordedmink2/obsidian-google-sync/blob/main/docs/templater-setup.md) — don't pair folder templates + trigger-on-creation with Import from Google.
 - Test with a spare Google calendar/task list before using important real data.
 
 More developer and test notes:

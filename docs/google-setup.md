@@ -1,172 +1,187 @@
 # Google setup guide
 
-This guide walks through the one-time Google setup for **Google Calendar and Tasks Sync**.
+This is the one-time setup that lets **Google Calendar and Tasks Sync** talk to your Google account.
 
-The plugin uses **your own Google OAuth client**. There is no shared backend service for your calendar/task data: Obsidian talks directly to Google, and OAuth tokens are stored in your vault’s local plugin data.
+It looks long, but most steps are a few clicks. Plan for about **15–20 minutes**, do it **once on a desktop computer**, and you won't have to repeat it — your phone just reuses the same settings later.
 
-## What you need before starting
+## Why there are extra steps
+
+This plugin has **no shared server**. Obsidian talks straight to Google using a Google "app" that **you** own, and your login tokens stay in your own vault. That's more private, but it means you create that Google app yourself. These steps are just that.
+
+## The whole thing in plain English
+
+You will:
+
+1. Create a free **Google Cloud project** (a container for your app).
+2. Turn on the **Calendar** and **Tasks** APIs.
+3. Say **who is allowed to log in** (just you).
+4. Put a tiny **redirect page** online (this is the only fiddly step — there's a one-click path below).
+5. Create an **OAuth client** and copy two values: a **Client ID** and a **Client secret**.
+6. Paste those into the plugin and click **Connect**.
+
+### A few words you'll see
+
+- **OAuth client** — your Google app's identity. Comes as a **Client ID** (public) and **Client secret** (keep private).
+- **Redirect / bridge page** — after you approve access in your browser, Google needs a web address to send you back to. Obsidian can't be a web address directly, so this little page catches Google's response and bounces it into Obsidian.
+- **Scopes** — the permissions you're granting. This plugin asks for Calendar and Tasks access, nothing else.
+
+## Before you start
 
 - A Google account.
-- Access to <https://console.cloud.google.com/>.
-- A place to host one tiny static redirect page, such as GitHub Pages, Cloudflare Pages, Netlify, or any static web host.
-- Obsidian installed on desktop first. Do the initial setup on desktop, then use the same settings on phone/tablet.
+- A computer with Obsidian and this plugin installed.
+- A free **GitHub account** (used for the easiest redirect-page option below). If you'd rather use another host, that works too.
 
-## 1. Create or choose a Google Cloud project
+---
 
-1. Open <https://console.cloud.google.com/>.
-2. Use the project picker at the top of the page.
-3. Create a new project or select an existing personal project.
+## Step 1 — Create a Google Cloud project
 
-## 2. Enable the Google APIs
+1. Go to <https://console.cloud.google.com/>.
+2. Click the **project picker** at the top of the page.
+3. Click **New Project**, give it any name (e.g. `Obsidian Sync`), and create it.
+4. Make sure that new project is **selected** in the picker before continuing.
 
-1. Go to **APIs & Services → Library**.
-2. Search for **Google Calendar API** and select **Enable**.
-3. Search for **Google Tasks API** and select **Enable**.
+✅ **Done when:** the project name shows at the top of the console.
 
-## 3. Configure the OAuth consent screen
+## Step 2 — Turn on the two Google APIs
+
+1. In the left menu, go to **APIs & Services → Library**.
+2. Search **Google Calendar API**, open it, click **Enable**.
+3. Go back to the Library, search **Google Tasks API**, open it, click **Enable**.
+
+✅ **Done when:** both APIs show **API Enabled** with a green check.
+
+## Step 3 — Say who can log in
 
 1. Go to **APIs & Services → OAuth consent screen**.
-2. Choose **External** unless you are using a Google Workspace internal app.
-3. Fill in the required app name/contact fields.
-4. Add your Google account under **Test users**.
+2. Choose **External**, then continue. (Workspace users with an internal app can pick **Internal**.)
+3. Fill in the required fields — an app name and your email are enough.
+4. Find **Test users** and **add your own Google email address**.
+5. Save.
 
-You can keep the app in Google’s **Testing** mode for personal use. That avoids a public Google verification process, but only listed test users can sign in.
+You can leave the app in **Testing** mode forever for personal use. That skips Google's public review — the only catch is that **only the test users you listed can log in**, which is exactly what you want.
 
-The plugin requests these scopes when you sign in:
+> The plugin requests only these permissions:
+>
+> ```text
+> https://www.googleapis.com/auth/calendar
+> https://www.googleapis.com/auth/tasks
+> ```
 
-```text
-https://www.googleapis.com/auth/calendar
-https://www.googleapis.com/auth/tasks
-```
+✅ **Done when:** your email is listed under **Test users**.
 
-## 4. Host the redirect bridge
+## Step 4 — Put the redirect page online
 
-Google requires an HTTPS redirect URL for a web OAuth client. Obsidian itself uses an `obsidian://` deep link, so this repo includes a tiny static bridge page that forwards Google’s one-time code back to Obsidian.
+This is the only tricky part — take your time, it's a one-time thing.
 
-The bridge files are in:
+The plugin includes a tiny page (in the `bridge/` folder) that does one job: catch Google's reply and hand it back to Obsidian. It contains **no secrets** and can't do anything on its own.
 
-```text
-bridge/index.html
-bridge/redirect.js
-```
+### Easiest path: GitHub Pages (free, no command line)
 
-### Easiest option: GitHub Pages
+1. Open this project on GitHub and click **Fork** (top-right) to make your own copy.
+2. In **your fork**, go to **Settings → Pages**.
+3. Under **Build and deployment → Source**, choose **GitHub Actions**.
+4. Go to the **Actions** tab, find **Deploy OAuth bridge to Pages**, and click **Run workflow** (on the `main` branch).
+5. Wait for it to finish (about a minute), then reopen **Settings → Pages** — your live address is shown there.
 
-If you are using your own fork/repo:
-
-1. In GitHub, open **Settings → Pages**.
-2. Set **Source** to **GitHub Actions**.
-3. Run the included **Deploy OAuth bridge to Pages** workflow, or push to trigger it if configured.
-4. Copy the published Pages URL.
-
-The URL will look similar to:
+It will look like this — **copy it exactly, including the trailing slash**:
 
 ```text
-https://YOUR-USER.github.io/obsidian-google-sync/
+https://YOUR-USERNAME.github.io/obsidian-google-sync/
 ```
 
-Use that exact URL as your **redirect bridge URL**.
+This is your **Redirect bridge URL**. Keep it handy for Steps 5 and 6.
 
-### Other static hosts
+### Prefer a different host?
 
-Upload the contents of `bridge/` to any HTTPS static host and use the resulting public URL.
+Upload everything inside the `bridge/` folder to any HTTPS static host (Cloudflare Pages, Netlify, your own site, etc.) and use the resulting `https://…` address as your bridge URL.
 
-The bridge does not contain your Google secret and cannot use the authorization code by itself. It only redirects the browser to Obsidian with the code.
+✅ **Done when:** opening your bridge URL in a browser loads a page (it'll say it's missing a code — that's expected).
 
-## 5. Create the OAuth client
+## Step 5 — Create the OAuth client (your two values)
 
 1. Go to **APIs & Services → Credentials**.
-2. Select **Create credentials → OAuth client ID**.
-3. Application type: **Web application**.
-4. Under **Authorized redirect URIs**, add your bridge URL exactly.
-5. Create the client.
-6. Copy the **Client ID** and **Client secret**.
+2. Click **Create credentials → OAuth client ID**.
+3. **Application type: Web application.**
+4. Under **Authorized redirect URIs**, click **Add URI** and paste your bridge URL from Step 4 — **exactly**, including the trailing slash.
+5. Click **Create**.
+6. A box pops up with your **Client ID** and **Client secret**. Copy both somewhere safe for the next step.
 
-## 6. Configure Obsidian
+✅ **Done when:** you have a Client ID and a Client secret copied down.
 
-In Obsidian, go to **Settings → Google Calendar and Tasks Sync** and fill in:
+## Step 6 — Put it all into Obsidian
 
-- **OAuth client ID** — from Google Cloud.
-- **OAuth client secret** — from Google Cloud.
-- **Redirect bridge URL** — the hosted bridge URL from step 4.
-- **Default calendar ID** — use `primary` unless you want a specific calendar.
-- **Task list ID** — use `@default` unless you want a specific Google Tasks list.
-- **Default timezone** — an IANA timezone such as `Pacific/Auckland`.
+In Obsidian, open **Settings → Google Calendar and Tasks Sync** and fill in:
 
-Then run these commands from the command palette:
+- **OAuth client ID** — from Step 5.
+- **OAuth client secret** — from Step 5.
+- **Redirect bridge URL** — from Step 4 (must match exactly).
+- **Default calendar ID** — leave as `primary` for now.
+- **Task list ID** — leave as `@default` for now.
+- **Default timezone** — your IANA timezone, e.g. `Pacific/Auckland`.
 
-1. **Connect to Google**.
-2. Approve the consent screen in the browser.
-3. Return to Obsidian when the bridge opens the `obsidian://google-sync` link.
-4. Run **Validate setup**.
-5. Run **Test connection**.
+Then, from the command palette (Ctrl/Cmd-P):
 
-## Optional: Templater workflow (recommended)
+1. Run **Connect to Google**.
+2. Approve access in the browser that opens.
+3. The bridge page sends you back to Obsidian automatically.
+4. Run **Validate setup** — it checks each piece and tells you what (if anything) is missing.
+5. Run **Test connection** for a final all-clear.
 
-To create clean event/task notes quickly, you can pair this plugin with the **Templater** community plugin.
+✅ **Done when:** **Validate setup** reports everything is OK.
+
+---
+
+## Step 7 — Try it safely first
+
+Before pointing it at your real calendar, do a dry run:
+
+1. Create a spare Google calendar or task list, and select it in the plugin settings.
+2. Add one test note in your `events/` folder and one in `tasks/`.
+3. Run **Sync now** and confirm they appear in Google.
+4. Run **Import events and tasks from Google** and confirm notes appear in your vault.
+
+When you're happy, switch the plugin back to your real calendar/list.
+
+## Setting up your phone
+
+Once desktop works, get the same vault (including the plugin's settings) onto your phone via Obsidian Sync, iCloud, git, or however you sync — then follow the [iOS checklist](ios-checklist.md). You do **not** repeat the Google Cloud steps.
+
+## Optional: faster note creation with Templater
+
+To get clean event/task notes with one click, pair this with the **Templater** community plugin.
 
 - Install link: `obsidian://show-plugin?id=templater-obsidian`
 - Setup guide: [Templater setup](templater-setup.md)
-- Scripted scaffold:
 
-```bash
-./scripts/setup-templater.sh /path/to/your/vault --configure-templater
-```
+> [!WARNING]
+> If you use **Import from Google** (or import-on-startup), do **not** combine Templater folder templates on `events`/`tasks` with "trigger on new file creation" — it overwrites imported notes. The [Templater setup](templater-setup.md) guide explains the safe options.
 
-This gives you prebuilt event/task templates and can auto-configure Templater’s template folder + trigger-on-create behavior.
+---
 
-Then add the folder mappings in Obsidian:
-- `events` → `templates/google-sync/event-template.md`
-- `tasks` → `templates/google-sync/task-template.md`
+## If something goes wrong
 
-Optional smoke-test commands:
+### "redirect_uri_mismatch"
 
-```bash
-./scripts/verify-setup.sh /path/to/your/vault
-./scripts/bootstrap-sample-notes.sh /path/to/your/vault
-```
+Your bridge URL must be **identical** in all three places: the Google OAuth client, the plugin setting, and the page that's actually live — **including the trailing slash**. Copy-paste the same string everywhere.
 
-Screenshot references: [`docs/assets/templater/`](assets/templater/)
+### Obsidian doesn't reopen after you approve access
 
-## 7. Test with safe data first
+Open your bridge URL directly in a browser to confirm it loads. Make sure Obsidian is installed and can open `obsidian://` links (especially on iOS).
 
-Before syncing important real calendars/tasks:
+### "access_denied" or it won't let you log in
 
-1. Create a spare Google calendar or task list.
-2. Configure the plugin to use that calendar/list.
-3. Create one test event note in `events/`.
-4. Create one test task note in `tasks/`.
-5. Run **Sync now**.
-6. Confirm the event/task appears in Google.
-7. Try **Import events and tasks from Google** and confirm notes are created in the vault.
+Your Google account must be listed under **Test users** (Step 3) while the app is in Testing mode.
 
-## Phone setup
+### Validate setup can't find the calendar or task list
 
-Once desktop works, sync/copy the plugin settings and files to your phone via Obsidian Sync, iCloud, git, or your normal vault sync method. Then follow:
+Start with `primary` and `@default`. Once a basic sync works, use the dropdown pickers in settings to choose a specific calendar or list.
 
-- [iOS checklist](ios-checklist.md)
+### Event times look wrong
 
-## Privacy notes
+Add a `timezone` field to the note, or set **Default timezone** correctly in settings.
 
-- Tokens and the OAuth client secret are stored in the plugin’s vault-local `data.json`.
-- Do not publish or share `.obsidian/plugins/google-sync/data.json`.
-- Do not commit a real `data.json` to git.
-- The plugin has no telemetry and does not send data anywhere except Google Calendar/Tasks and your redirect bridge during sign-in.
+## Privacy reminders
 
-## Common problems
-
-### Google says redirect URI mismatch
-
-The URL in Google Cloud must exactly match the plugin setting and hosted bridge URL, including trailing slash.
-
-### Obsidian does not reopen after login
-
-Open the bridge URL directly in a browser and confirm the page loads. On iOS, make sure Obsidian is installed and can open `obsidian://` links.
-
-### Validate setup cannot find the calendar or task list
-
-Use `primary` and `@default` first. Once that works, use the settings pickers to select a specific calendar or task list.
-
-### Times are off
-
-Add a `timezone` field to event notes or set **Default timezone** correctly in settings.
+- Your tokens and Client secret live only in the plugin's vault-local `data.json`.
+- Never publish, share, or commit `.obsidian/plugins/google-sync/data.json`.
+- The plugin sends data nowhere except Google and your own redirect page during sign-in. No telemetry.
