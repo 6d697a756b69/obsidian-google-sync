@@ -98,7 +98,7 @@ Templates created by `scripts/setup-templater.sh`:
 
 Suggested Templater settings:
 - Template folder location: `templates`
-- Trigger Templater on new file creation: enabled
+- Trigger Templater on new file creation: disabled if you use Import from Google/import-on-startup
 
 Suggested Google Sync settings:
 - Events folder: `events`
@@ -117,7 +117,7 @@ with open(p,'r',encoding='utf-8') as f:
 if not isinstance(data,dict):
     data={}
 data['templates_folder']='templates'
-data['trigger_on_file_creation']=True
+data['trigger_on_file_creation']=False
 with open(p,'w',encoding='utf-8') as f:
     json.dump(data,f,indent=2)
     f.write('\n')
@@ -127,7 +127,7 @@ PY
     cat > "$TP_DATA" <<'EOF'
 {
   "templates_folder": "templates",
-  "trigger_on_file_creation": true
+  "trigger_on_file_creation": false
 }
 EOF
     echo "Created $TP_DATA"

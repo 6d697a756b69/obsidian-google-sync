@@ -66,8 +66,7 @@ export function eventToGoogle(fm: EventFrontmatter, defaultTz: string): GoogleEv
     if (fm.color != null) ev.colorId = fm.color;
     if (fm.guestsCanInviteOthers != null) ev.guestsCanInviteOthers = fm.guestsCanInviteOthers;
     if (fm.guestsCanModify != null) ev.guestsCanModify = fm.guestsCanModify;
-    if (fm.guestsCanSeeOtherGuests != null)
-        ev.guestsCanSeeOtherGuests = fm.guestsCanSeeOtherGuests;
+    if (fm.guestsCanSeeOtherGuests != null) ev.guestsCanSeeOtherGuests = fm.guestsCanSeeOtherGuests;
     if (fm.reminders != null) ev.reminders = fm.reminders;
 
     if (typeof fm.eventType === "string" && fm.eventType.trim() !== "") {
@@ -117,6 +116,7 @@ export function remoteEventToNote(event: GoogleEvent, calendarId: string): Event
     const fm: EventFrontmatter = {
         title: event.summary || "Untitled event",
         calendarId,
+        syncDirection: "pull-only",
     };
 
     if (event.id) fm.googleId = event.id;
@@ -135,8 +135,7 @@ export function remoteEventToNote(event: GoogleEvent, calendarId: string): Event
     if (event.visibility != null) fm.visibility = event.visibility;
     if (event.transparency != null) fm.transparency = event.transparency;
     if (event.colorId != null) fm.color = event.colorId;
-    if (event.guestsCanInviteOthers != null)
-        fm.guestsCanInviteOthers = event.guestsCanInviteOthers;
+    if (event.guestsCanInviteOthers != null) fm.guestsCanInviteOthers = event.guestsCanInviteOthers;
     if (event.guestsCanModify != null) fm.guestsCanModify = event.guestsCanModify;
     if (event.guestsCanSeeOtherGuests != null)
         fm.guestsCanSeeOtherGuests = event.guestsCanSeeOtherGuests;
@@ -204,6 +203,7 @@ export const EVENT_MANAGED_KEYS = [
     "meetLink",
     "attachments",
     "source",
+    "syncDirection",
 ] as const;
 
 export const TASK_MANAGED_KEYS = [
@@ -216,6 +216,7 @@ export const TASK_MANAGED_KEYS = [
     "notes",
     "parent",
     "position",
+    "syncDirection",
 ] as const;
 
 /**
@@ -251,6 +252,7 @@ export function remoteTaskToNote(
         title: task.title || "Untitled task",
         completed: task.status === "completed",
         status: task.status || "needsAction",
+        syncDirection: "pull-only",
     };
     if (task.id) fm.googleId = task.id;
     if (taskListId) fm.tasklist = taskListId;

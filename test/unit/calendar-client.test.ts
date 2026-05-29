@@ -56,7 +56,10 @@ describe("GoogleCalendarClient", () => {
     });
 
     it("passes conferenceDataVersion on patch and omits unset query params", async () => {
-        const { calls, fn } = fakeHttp([jsonResp(200, { id: "ev1" }), jsonResp(200, { id: "ev1" })]);
+        const { calls, fn } = fakeHttp([
+            jsonResp(200, { id: "ev1" }),
+            jsonResp(200, { id: "ev1" }),
+        ]);
         const client = new GoogleCalendarClient(fn, token, noWaitRetry);
         await client.patchEvent("primary", "ev1", {}, { conferenceDataVersion: 1 });
         expect(calls[0]?.url).to.equal(

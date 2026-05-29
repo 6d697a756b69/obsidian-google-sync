@@ -77,7 +77,12 @@ describe("eventToGoogle", () => {
 
     it("maps transparency (free/busy)", () => {
         const ev = eventToGoogle(
-            { title: "Focus", date: "2026-06-02T09:00:00", timezone: NZ, transparency: "transparent" },
+            {
+                title: "Focus",
+                date: "2026-06-02T09:00:00",
+                timezone: NZ,
+                transparency: "transparent",
+            },
             "UTC",
         );
         expect(ev.transparency).to.equal("transparent");
@@ -89,7 +94,10 @@ describe("eventToGoogle", () => {
                 title: "Standup",
                 date: "2026-06-02T09:00:00",
                 timezone: NZ,
-                recurrence: ["RRULE:FREQ=WEEKLY;BYDAY=MO", "EXDATE;TZID=Pacific/Auckland:20260615T090000"],
+                recurrence: [
+                    "RRULE:FREQ=WEEKLY;BYDAY=MO",
+                    "EXDATE;TZID=Pacific/Auckland:20260615T090000",
+                ],
             },
             "UTC",
         );
@@ -101,7 +109,12 @@ describe("eventToGoogle", () => {
 
     it("wraps a single recurrence string into a one-element array", () => {
         const ev = eventToGoogle(
-            { title: "X", date: "2026-06-02T09:00:00", timezone: NZ, recurrence: "RRULE:FREQ=DAILY" },
+            {
+                title: "X",
+                date: "2026-06-02T09:00:00",
+                timezone: NZ,
+                recurrence: "RRULE:FREQ=DAILY",
+            },
             "UTC",
         );
         expect(ev.recurrence).to.deep.equal(["RRULE:FREQ=DAILY"]);
@@ -158,6 +171,10 @@ describe("eventToGoogle", () => {
 });
 
 describe("remoteEventToNote", () => {
+    it("marks imported events as pull-only to avoid echo PATCHes", () => {
+        const fm = remoteEventToNote({ id: "e1", summary: "Imported" }, "primary");
+        expect(fm.syncDirection).to.equal("pull-only");
+    });
     it("maps extended event fields back into frontmatter", () => {
         const fm = remoteEventToNote(
             {
@@ -199,13 +216,14 @@ describe("remoteEventToNote", () => {
         expect(single.recurrence).to.equal("RRULE:FREQ=DAILY");
 
         const multi = remoteEventToNote(
-            { id: "e2", summary: "Y", recurrence: ["RRULE:FREQ=WEEKLY", "EXDATE:20260615T090000Z"] },
+            {
+                id: "e2",
+                summary: "Y",
+                recurrence: ["RRULE:FREQ=WEEKLY", "EXDATE:20260615T090000Z"],
+            },
             "primary",
         );
-        expect(multi.recurrence).to.deep.equal([
-            "RRULE:FREQ=WEEKLY",
-            "EXDATE:20260615T090000Z",
-        ]);
+        expect(multi.recurrence).to.deep.equal(["RRULE:FREQ=WEEKLY", "EXDATE:20260615T090000Z"]);
     });
 
     it("emits the detailed attendee form only when metadata is present", () => {
@@ -254,7 +272,9 @@ describe("remoteEventToNote", () => {
             {
                 id: "e1",
                 summary: "Doc",
-                attachments: [{ fileUrl: "https://drive/abc", title: "Spec", mimeType: "application/pdf" }],
+                attachments: [
+                    { fileUrl: "https://drive/abc", title: "Spec", mimeType: "application/pdf" },
+                ],
                 source: { title: "Ticket", url: "https://tracker/1" },
             },
             "primary",
@@ -294,6 +314,10 @@ describe("taskToGoogle", () => {
 });
 
 describe("remoteTaskToNote", () => {
+    it("marks imported tasks as pull-only to avoid echo PATCHes", () => {
+        const fm = remoteTaskToNote({ id: "t1", title: "Imported task" }, "L1");
+        expect(fm.syncDirection).to.equal("pull-only");
+    });
     it("maps notes + due and leaves parent unset for a top-level task", () => {
         const fm = remoteTaskToNote(
             { id: "t1", title: "Buy milk", notes: "2%", due: "2026-06-01T00:00:00.000Z" },
@@ -307,11 +331,7 @@ describe("remoteTaskToNote", () => {
     });
 
     it("writes parent as a wikilink to the resolved parent note basename", () => {
-        const fm = remoteTaskToNote(
-            { id: "c1", title: "Sub", parent: "p1" },
-            "L1",
-            "buy-milk-p1",
-        );
+        const fm = remoteTaskToNote({ id: "c1", title: "Sub", parent: "p1" }, "L1", "buy-milk-p1");
         expect(fm.parent).to.equal("[[buy-milk-p1]]");
     });
 
@@ -321,7 +341,10 @@ describe("remoteTaskToNote", () => {
     });
 
     it("writes the Google-assigned position (read-only) back into frontmatter", () => {
-        const fm = remoteTaskToNote({ id: "t1", title: "X", position: "00000000000000001234" }, "L1");
+        const fm = remoteTaskToNote(
+            { id: "t1", title: "X", position: "00000000000000001234" },
+            "L1",
+        );
         expect(fm.position).to.equal("00000000000000001234");
     });
 });

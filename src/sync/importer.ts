@@ -207,9 +207,7 @@ export class GoogleImporter {
             // already-seen id -> note basename lets a subtask link back to its parent.
             const basenameById = new Map<string, string>();
             for (const task of tasks) {
-                const parentBasename = task.parent
-                    ? basenameById.get(task.parent)
-                    : undefined;
+                const parentBasename = task.parent ? basenameById.get(task.parent) : undefined;
                 const basename = await this.upsertTask(
                     taskListId,
                     task,

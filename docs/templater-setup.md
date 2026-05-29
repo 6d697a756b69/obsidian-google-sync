@@ -7,7 +7,7 @@ If you use the **Templater** community plugin, you can standardize new event/tas
 >
 > When Google Sync imports an event/task it creates a note in those folders. With trigger-on-creation enabled, Templater immediately rewrites that note from the template — overwriting the real `title`/`date`/body with the template's defaults. You end up with notes that say `title: Event title`, dated whatever the template hardcodes, even though the file was a real imported event.
 >
-> Google Sync (0.1.12+) suppresses the sync events from its own writes, so this no longer pushes the clobbered note **back** to Google and corrupts your calendar. But Templater will still mangle the **local** note. If you import from Google, choose one:
+> Google Sync (0.2.1+) marks imported notes `syncDirection: pull-only`, so a clobbered imported note should not be patched back to Google. But Templater can still mangle the **local** note. If you import from Google, choose one:
 >
 > - **Turn off** "Trigger Templater on new file creation", or
 > - **Remove** the `events`/`tasks` folder-template mappings (apply templates manually to notes you author), or
@@ -50,7 +50,7 @@ That flag updates (or creates) this file:
 with:
 
 - `templates_folder: "templates"`
-- `trigger_on_file_creation: true`
+- `trigger_on_file_creation: false` (safe default for vaults that import from Google)
 
 ## Smoke-test commands (recommended)
 
@@ -75,7 +75,7 @@ Then in Obsidian:
     - `task-template.md`
 3. In **Templater settings**:
     - Template folder location: `templates`
-    - Trigger Templater on new file creation: On
+    - Trigger Templater on new file creation: **Off if you use Import from Google/import-on-startup**. Turn it on only for vaults where you author notes locally and do not import Google events/tasks.
 4. In **Templater → Folder Templates** (important mapping step):
     - Map `events` → `templates/google-sync/event-template.md`
     - Map `tasks` → `templates/google-sync/task-template.md`

@@ -212,7 +212,12 @@ describe("GoogleAuth", () => {
     });
 
     it("prepare() is idempotent — a second call keeps the same state", async () => {
-        const auth = new GoogleAuth(fakeHttp().fn, () => config, memStore().store, () => 0);
+        const auth = new GoogleAuth(
+            fakeHttp().fn,
+            () => config,
+            memStore().store,
+            () => 0,
+        );
         await auth.prepare();
         const first = auth.authUrlFromPrepared().state;
         await auth.prepare();
@@ -220,7 +225,12 @@ describe("GoogleAuth", () => {
     });
 
     it("authUrlFromPrepared() throws when nothing was prepared", () => {
-        const auth = new GoogleAuth(fakeHttp().fn, () => config, memStore().store, () => 0);
+        const auth = new GoogleAuth(
+            fakeHttp().fn,
+            () => config,
+            memStore().store,
+            () => 0,
+        );
         expect(() => auth.authUrlFromPrepared()).to.throw(/prepared/i);
     });
 

@@ -9,9 +9,11 @@ This project is pre-1.0. Please use the latest released version.
 Please do **not** open a public GitHub issue for security vulnerabilities.
 
 Instead, contact the maintainer privately via GitHub profile:
+
 - https://github.com/Cordedmink2
 
 Include:
+
 - affected plugin version
 - clear reproduction steps
 - impact summary

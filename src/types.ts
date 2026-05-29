@@ -30,6 +30,8 @@ export interface EventFrontmatter {
     attachments?: EventAttachment[];
     source?: { title?: string; url?: string };
     googleId?: string; // filled by the plugin after insert
+    /** Imported Google objects default to pull-only so template/Obsidian Sync rewrites cannot PATCH read-only/old calendar events. Delete this field or set `two-way` to opt an imported note into outbound sync. */
+    syncDirection?: "pull-only" | "two-way";
     tasks?: string[]; // linked task note basenames to close on archive
     [key: string]: unknown;
 }
@@ -65,6 +67,8 @@ export interface TaskFrontmatter {
     parent?: string; // wikilink/basename of the parent task note (Google `parent` subtask)
     position?: string; // Google-assigned sort key (read-only, written back on import)
     googleId?: string;
+    /** Imported Google tasks default to pull-only; delete this field or set `two-way` to opt into outbound sync. */
+    syncDirection?: "pull-only" | "two-way";
     [key: string]: unknown;
 }
 

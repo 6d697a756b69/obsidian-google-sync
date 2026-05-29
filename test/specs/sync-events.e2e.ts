@@ -74,7 +74,9 @@ describe("event sync against mocked Google", function () {
                 c.url.includes("conferenceDataVersion=1"),
         );
         if (!insert) throw new Error("no conferencing insert recorded");
-        const body = JSON.parse(insert.body ?? "{}") as { conferenceData?: { createRequest?: unknown } };
+        const body = JSON.parse(insert.body ?? "{}") as {
+            conferenceData?: { createRequest?: unknown };
+        };
         expect(body.conferenceData?.createRequest).to.not.equal(undefined);
         expect(meetLink).to.equal("https://meet.google.com/e2e-link");
     });

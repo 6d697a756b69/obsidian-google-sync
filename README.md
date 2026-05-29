@@ -20,6 +20,7 @@ This is intentionally conservative so it does not destroy local edits:
 - **Obsidian → Google:** automatic while Obsidian is open, if the matching sync-on-create/modify/delete settings are enabled.
 - **Google → Obsidian:** manual via **Import events and tasks from Google**.
 - **Google → Obsidian on startup:** optional and off by default. When enabled, it only creates new missing notes and does **not** overwrite existing notes.
+- **Imported notes are pull-only by default:** notes created from Google include `syncDirection: pull-only` so template rewrites, Obsidian Sync churn, or accidental edits do not immediately PATCH read-only/old Google events. Delete that field or set it to `two-way` on a note if you intentionally want edits to that imported note to push back to Google.
 
 If you need a full two-way merge workflow, test carefully with a spare calendar/list first.
 
@@ -264,7 +265,7 @@ Entries can be Obsidian wikilinks (so they also show up in the graph) or plain n
 - If a note does not sync, check that it is under the configured `events/` or `tasks/` folder and has the required frontmatter fields.
 - If event times look wrong, add an explicit `timezone` such as `Pacific/Auckland`.
 - Task `due` dates are date-only in Google Tasks. The plugin preserves the calendar date you set (no off-by-one in timezones ahead of UTC); upgrade to 0.1.13+ if "due tomorrow" ever showed as today.
-- If imported notes get overwritten back to a template (e.g. `title: Event title`), see the Templater warning in the [Templater setup guide](https://github.com/Cordedmink2/obsidian-google-sync/blob/main/docs/templater-setup.md) — don't pair folder templates + trigger-on-creation with Import from Google.
+- If imported notes get overwritten back to a template (e.g. `title: Event title`), see the Templater warning in the [Templater setup guide](https://github.com/Cordedmink2/obsidian-google-sync/blob/main/docs/templater-setup.md) — don't pair folder templates + trigger-on-creation with Import from Google. Version 0.2.1+ also marks imported notes `syncDirection: pull-only` to prevent those local clobbers from being PATCHed back to Google.
 - Test with a spare Google calendar/task list before using important real data.
 
 More developer and test notes:

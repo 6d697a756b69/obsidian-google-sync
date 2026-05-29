@@ -12,6 +12,11 @@ interface RemoteRef {
     kind: NoteKind;
     googleId: string;
     container: string; // calendarId for events, taskListId for tasks
+    pullOnly: boolean;
+}
+
+function isPullOnly(fm: Record<string, unknown>): boolean {
+    return fm.syncDirection === "pull-only" || fm.googleSyncDirection === "pull-only";
 }
 
 /**
@@ -56,7 +61,12 @@ export class SyncRouter {
                 kind === "event"
                     ? (fm?.calendarId as string) || s.defaultCalendarId
                     : (fm?.tasklist as string) || s.taskListId;
-            this.index.set(file.path, { kind, googleId, container });
+            this.index.set(file.path, {
+                kind,
+                googleId,
+                container,
+                pullOnly: isPullOnly(fm as Record<string, unknown>),
+            });
         }
     }
 
@@ -64,6 +74,7 @@ export class SyncRouter {
         const kind = this.syncKind(file.path);
         if (!kind) return;
         const fm = await readFrontmatter(this.app, file);
+        if (isPullOnly(fm)) return;
         if (kind === "event") await this.syncEvent(file, fm);
         else await this.syncTask(file, fm);
     }
@@ -79,12 +90,18 @@ export class SyncRouter {
         const body = eventToGoogle(v.value, s.defaultTimezone);
         const opts = this.eventWriteOptions(v.value, body);
         if (v.value.googleId) {
-            const patched = await this.calendar.patchEvent(calendarId, v.value.googleId, body, opts);
+            const patched = await this.calendar.patchEvent(
+                calendarId,
+                v.value.googleId,
+                body,
+                opts,
+            );
             await this.writeMeetLinkBack(file, v.value, patched);
             this.index.set(file.path, {
                 kind: "event",
                 googleId: v.value.googleId,
                 container: calendarId,
+                pullOnly: false,
             });
         } else {
             const created = await this.calendar.insertEvent(calendarId, body, opts);
@@ -96,6 +113,7 @@ export class SyncRouter {
                     kind: "event",
                     googleId: created.id,
                     container: calendarId,
+                    pullOnly: false,
                 });
             }
         }
@@ -157,11 +175,13 @@ export class SyncRouter {
         if (v.value.googleId) {
             await this.tasks.patchTask(taskListId, v.value.googleId, body);
             // parent can't be changed via patch — move handles (re)nesting.
-            if (parentId) await this.tasks.moveTask(taskListId, v.value.googleId, { parent: parentId });
+            if (parentId)
+                await this.tasks.moveTask(taskListId, v.value.googleId, { parent: parentId });
             this.index.set(file.path, {
                 kind: "task",
                 googleId: v.value.googleId,
                 container: taskListId,
+                pullOnly: false,
             });
         } else {
             const created = await this.tasks.insertTask(
@@ -176,6 +196,7 @@ export class SyncRouter {
                     kind: "task",
                     googleId: created.id,
                     container: taskListId,
+                    pullOnly: false,
                 });
             }
         }
@@ -188,10 +209,7 @@ export class SyncRouter {
      */
     private resolveParentGoogleId(parent: unknown, fromPath: string): string | undefined {
         if (typeof parent !== "string" || parent.trim() === "") return undefined;
-        const dest = this.app.metadataCache.getFirstLinkpathDest(
-            linkToBasename(parent),
-            fromPath,
-        );
+        const dest = this.app.metadataCache.getFirstLinkpathDest(linkToBasename(parent), fromPath);
         if (!dest) return undefined;
         const gid: unknown = this.app.metadataCache.getFileCache(dest)?.frontmatter?.googleId;
         return typeof gid === "string" && gid ? gid : undefined;
@@ -200,7 +218,7 @@ export class SyncRouter {
     /** Delete the Google object for a (now-removed) note path, if we know its id. */
     async handleDelete(path: string): Promise<void> {
         const ref = this.index.get(path);
-        if (!ref) return;
+        if (!ref || ref.pullOnly) return;
         if (ref.kind === "event") await this.calendar.deleteEvent(ref.container, ref.googleId);
         else await this.tasks.deleteTask(ref.container, ref.googleId);
         this.index.delete(path);

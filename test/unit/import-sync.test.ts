@@ -82,6 +82,7 @@ describe("Google import sync", () => {
             description: "Bring forms",
             status: "confirmed",
             calendarId: "primary",
+            syncDirection: "pull-only",
             recurrence: "RRULE:FREQ=WEEKLY",
             attendees: { required: ["a@example.com"], optional: ["b@example.com"] },
             googleId: "ev1",
@@ -109,6 +110,7 @@ describe("Google import sync", () => {
             status: "completed",
             googleId: "t1",
             tasklist: "L1",
+            syncDirection: "pull-only",
         });
     });
 });
