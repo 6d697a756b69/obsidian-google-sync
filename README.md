@@ -151,7 +151,7 @@ description: Catch-up about Q3 plan
 status: confirmed
 visibility: default
 eventType: meeting
-color: "7"
+color: "7" # Google Calendar colorId (1-11)
 guestsCanInviteOthers: true
 guestsCanModify: false
 guestsCanSeeOtherGuests: true

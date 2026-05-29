@@ -50,7 +50,7 @@ description:
 status: confirmed
 visibility: default
 eventType: meeting
-color:
+color: # Google Calendar colorId (1-11)
 guestsCanInviteOthers: true
 guestsCanModify: false
 guestsCanSeeOtherGuests: true
