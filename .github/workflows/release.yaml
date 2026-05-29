@@ -11,35 +11,48 @@ on:
     push:
         tags: ["*.*.*"]
 
+permissions:
+    contents: write
+    id-token: write
+    attestations: write
+
 jobs:
     build:
         runs-on: ubuntu-latest
-        permissions:
-            contents: write
         steps:
             - uses: actions/checkout@v4
 
             - uses: actions/setup-node@v4
               with:
-                  node-version: "18.x"
+                  node-version: "20"
+                  cache: npm
 
             - name: Build
               run: |
                   npm ci
                   npm run build
 
-            - name: Release
-              run: |
-                  TAG="${GITHUB_REF#refs/tags/}"
+            - name: Create GitHub release and upload assets
+              uses: softprops/action-gh-release@v2
+              with:
+                  files: |
+                      main.js
+                      manifest.json
+                      styles.css
+                  generate_release_notes: true
 
-                  if [ -e styles.css ]; then
-                      FILES="main.js manifest.json styles.css"
-                  else
-                      FILES="main.js manifest.json"
-                  fi
+            - name: Attest main.js provenance
+              uses: actions/attest-build-provenance@v2
+              with:
+                  subject-path: main.js
 
-                  gh release create "$TAG" \
-                    --title="$TAG" \
-                    $FILES
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            - name: Attest manifest.json provenance
+              uses: actions/attest-build-provenance@v2
+              with:
+                  subject-path: manifest.json
+
+            - name: Attest styles.css provenance
+              if: ${{ hashFiles('styles.css') != '' }}
+              uses: actions/attest-build-provenance@v2
+              with:
+                  subject-path: styles.css
