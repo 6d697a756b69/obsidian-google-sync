@@ -29,6 +29,9 @@ export class SyncRouter {
         private readonly notify: (msg: string) => void = (m) => {
             new Notice(m);
         },
+        /** Called when the router writes a googleId back into a note, so the caller can
+         * suppress the resulting modify event from echoing back into sync. */
+        private readonly onTouch: (path: string) => void = () => {},
     ) {}
 
     /** The note kind to sync for this path, or null if it should be ignored. */
@@ -84,6 +87,7 @@ export class SyncRouter {
             const created = await this.calendar.insertEvent(calendarId, body);
             if (created.id) {
                 await writeFrontmatterKey(this.app, file, "googleId", created.id);
+                this.onTouch(file.path);
                 this.index.set(file.path, {
                     kind: "event",
                     googleId: created.id,
@@ -117,6 +121,7 @@ export class SyncRouter {
             const created = await this.tasks.insertTask(taskListId, body);
             if (created.id) {
                 await writeFrontmatterKey(this.app, file, "googleId", created.id);
+                this.onTouch(file.path);
                 this.index.set(file.path, {
                     kind: "task",
                     googleId: created.id,

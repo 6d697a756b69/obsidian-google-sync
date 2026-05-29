@@ -102,6 +102,9 @@ export class GoogleImporter {
         private readonly calendar: GoogleCalendarClient,
         private readonly tasks: GoogleTasksClient,
         private readonly settings: () => GoogleSyncSettings,
+        /** Called with each note path the importer creates or rewrites, so the caller can
+         * suppress the resulting vault events from echoing back into sync. */
+        private readonly onTouch: (path: string) => void = () => {},
     ) {}
 
     async importAll(options: ImportOptions = {}): Promise<ImportCounts> {
@@ -163,22 +166,22 @@ export class GoogleImporter {
             const s = this.settings();
             if (!isEventAllowed(event, s.recurringEventFilterMode, s.recurringEventFilters)) return;
             const fm = remoteEventToNote(event, calendarId);
-            const existing = await findByGoogleId(this.app, this.settings().eventsFolder, event.id);
+            const existing = await findByGoogleId(this.app, s.eventsFolder, event.id);
             if (existing) {
                 if (options.createOnly) return;
                 await writeFrontmatter(this.app, existing, fm);
-            } else
-                await upsertMarkdownFile(
+                this.onTouch(existing.path);
+            } else {
+                const path = await pathFor(
                     this.app,
-                    await pathFor(
-                        this.app,
-                        this.settings().eventsFolder,
-                        event.id,
-                        event.summary,
-                        "event",
-                    ),
-                    fm,
+                    s.eventsFolder,
+                    event.id,
+                    event.summary,
+                    "event",
                 );
+                await upsertMarkdownFile(this.app, path, fm);
+                this.onTouch(path);
+            }
             counts.events++;
         } catch (e) {
             counts.failed++;
@@ -215,18 +218,18 @@ export class GoogleImporter {
             if (existing) {
                 if (options.createOnly) return;
                 await writeFrontmatter(this.app, existing, fm);
-            } else
-                await upsertMarkdownFile(
+                this.onTouch(existing.path);
+            } else {
+                const path = await pathFor(
                     this.app,
-                    await pathFor(
-                        this.app,
-                        this.settings().tasksFolder,
-                        task.id,
-                        task.title,
-                        "task",
-                    ),
-                    fm,
+                    this.settings().tasksFolder,
+                    task.id,
+                    task.title,
+                    "task",
                 );
+                await upsertMarkdownFile(this.app, path, fm);
+                this.onTouch(path);
+            }
             counts.tasks++;
         } catch (e) {
             counts.failed++;

@@ -8,6 +8,7 @@ import { GoogleTasksClient, TaskListEntry } from "./google/tasks";
 import { SyncRouter } from "./sync/router";
 import { Lifecycle } from "./sync/lifecycle";
 import { GoogleImporter } from "./sync/importer";
+import { SyncSuppressor } from "./sync/suppression";
 import { registerCommands } from "./commands";
 
 interface PersistedData {
@@ -18,6 +19,10 @@ interface PersistedData {
 
 const DEBOUNCE_MS = 750;
 const SETTINGS_SAVE_DEBOUNCE_MS = 500;
+// How long to ignore vault events for a note the plugin just wrote. Must comfortably outlast
+// the debounce plus any same-tick rewrite by another plugin (e.g. Templater's "trigger on file
+// creation"), so an import can't echo back into sync and overwrite the real Google item.
+const SYNC_SUPPRESS_MS = 15_000;
 const LIFECYCLE_CHECK_MS = 60 * 60 * 1000; // hourly tick
 const LIFECYCLE_MIN_INTERVAL_MS = 23 * 60 * 60 * 1000; // ~daily
 
@@ -35,6 +40,7 @@ export default class GoogleSyncPlugin extends Plugin {
     private lifecycle!: Lifecycle;
     private importer!: GoogleImporter;
     private lastLifecycleRun = 0;
+    private suppressor = new SyncSuppressor(SYNC_SUPPRESS_MS);
     private timers = new Map<string, number>();
     private settingsSaveTimer: number | null = null;
     private settingsSavePending: Promise<void> | null = null;
@@ -53,13 +59,24 @@ export default class GoogleSyncPlugin extends Plugin {
         const tokenProvider = () => this.auth.getAccessToken();
         this.calendar = new GoogleCalendarClient(http, tokenProvider);
         this.tasks = new GoogleTasksClient(http, tokenProvider);
-        this.router = new SyncRouter(this.app, this.calendar, this.tasks, () => this.settings);
+        const suppress = (path: string) => this.suppressor.suppress(path, Date.now());
+        this.router = new SyncRouter(
+            this.app,
+            this.calendar,
+            this.tasks,
+            () => this.settings,
+            (m) => {
+                new Notice(m);
+            },
+            suppress,
+        );
         this.lifecycle = new Lifecycle(this.app, this.tasks, () => this.settings);
         this.importer = new GoogleImporter(
             this.app,
             this.calendar,
             this.tasks,
             () => this.settings,
+            suppress,
         );
 
         this.addSettingTab(new GoogleSyncSettingTab(this.app, this));
@@ -401,12 +418,14 @@ export default class GoogleSyncPlugin extends Plugin {
     private registerVaultEvents(): void {
         this.registerEvent(
             this.app.vault.on("create", (f) => {
-                if (f instanceof TFile && this.settings.syncOnCreate) this.debounceSync(f);
+                if (f instanceof TFile && this.settings.syncOnCreate && !this.isSuppressed(f.path))
+                    this.debounceSync(f);
             }),
         );
         this.registerEvent(
             this.app.vault.on("modify", (f) => {
-                if (f instanceof TFile && this.settings.syncOnModify) this.debounceSync(f);
+                if (f instanceof TFile && this.settings.syncOnModify && !this.isSuppressed(f.path))
+                    this.debounceSync(f);
             }),
         );
         this.registerEvent(
@@ -419,6 +438,11 @@ export default class GoogleSyncPlugin extends Plugin {
                 if (f instanceof TFile) void this.safeRename(f, oldPath);
             }),
         );
+    }
+
+    /** True while a note the plugin just wrote is in its echo-suppression window. */
+    private isSuppressed(path: string): boolean {
+        return this.suppressor.isSuppressed(path, Date.now());
     }
 
     private debounceSync(file: TFile): void {
