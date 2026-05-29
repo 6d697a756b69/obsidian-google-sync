@@ -20,6 +20,20 @@ describe("GoogleCalendarClient", () => {
         expect(JSON.parse(calls[0]?.body ?? "{}")).to.deep.equal({ summary: "Standup" });
     });
 
+    it("bounds a list to the given time window", async () => {
+        const { calls, fn } = fakeHttp([jsonResp(200, { items: [] })]);
+        const client = new GoogleCalendarClient(fn, token, noWaitRetry);
+
+        await client.listEvents("primary", {
+            timeMin: "2026-05-22T00:00:00.000Z",
+            timeMax: "2026-08-27T00:00:00.000Z",
+        });
+
+        expect(calls[0]?.url).to.equal(
+            "https://www.googleapis.com/calendar/v3/calendars/primary/events?singleEvents=true&showDeleted=true&timeMin=2026-05-22T00%3A00%3A00.000Z&timeMax=2026-08-27T00%3A00%3A00.000Z",
+        );
+    });
+
     it("patches an event by id", async () => {
         const { calls, fn } = fakeHttp([jsonResp(200, { id: "ev1" })]);
         const client = new GoogleCalendarClient(fn, token, noWaitRetry);

@@ -5,6 +5,7 @@ import { GoogleSyncSettings } from "../settings";
 import { GoogleEvent, GoogleTask } from "../types";
 import { readFrontmatter, upsertMarkdownFile, writeFrontmatter } from "../io";
 import { remoteEventToNote, remoteTaskToNote } from "./mapper";
+import { isEventAllowed } from "./recurrence";
 
 export interface ImportCounts {
     events: number;
@@ -105,15 +106,39 @@ export class GoogleImporter {
 
     async importAll(options: ImportOptions = {}): Promise<ImportCounts> {
         const counts: ImportCounts = { events: 0, tasks: 0, failed: 0 };
-        await this.importEvents(counts, options);
-        await this.importTasks(counts, options);
+        // Events and tasks are imported independently: a failure in one phase must not
+        // abort the other, nor prevent the caller from running the lifecycle afterwards.
+        try {
+            await this.importEvents(counts, options);
+        } catch (e) {
+            counts.failed++;
+            console.error("[google-sync] event import failed", e);
+        }
+        try {
+            await this.importTasks(counts, options);
+        } catch (e) {
+            counts.failed++;
+            console.error("[google-sync] task import failed", e);
+        }
         return counts;
+    }
+
+    /** Bounded RFC3339 time window so recurring events aren't expanded across all of history. */
+    private eventWindow(): { timeMin: string; timeMax: string } {
+        const s = this.settings();
+        const dayMs = 24 * 60 * 60 * 1000;
+        const now = Date.now();
+        return {
+            timeMin: new Date(now - Math.max(0, s.importPastDays) * dayMs).toISOString(),
+            timeMax: new Date(now + Math.max(0, s.importFutureDays) * dayMs).toISOString(),
+        };
     }
 
     private async importEvents(counts: ImportCounts, options: ImportOptions): Promise<void> {
         const calendarIds = await this.calendarIds();
+        const window = this.eventWindow();
         for (const calendarId of calendarIds) {
-            const { items } = await this.calendar.listEvents(calendarId);
+            const { items } = await this.calendar.listEvents(calendarId, window);
             for (const event of items) await this.upsertEvent(calendarId, event, counts, options);
         }
     }
@@ -135,6 +160,8 @@ export class GoogleImporter {
     ): Promise<void> {
         try {
             if (event.status === "cancelled") return;
+            const s = this.settings();
+            if (!isEventAllowed(event, s.recurringEventFilterMode, s.recurringEventFilters)) return;
             const fm = remoteEventToNote(event, calendarId);
             const existing = await findByGoogleId(this.app, this.settings().eventsFolder, event.id);
             if (existing) {

@@ -74,8 +74,11 @@ export default class GoogleSyncPlugin extends Plugin {
         );
         this.app.workspace.onLayoutReady(() => {
             this.router.buildIndex();
-            void this.importOnStartup();
-            void this.maybeRunLifecycle();
+            // Run the startup import first, THEN the standalone lifecycle. Firing both
+            // concurrently let the lifecycle scan before the import had written any notes —
+            // it would archive nothing and still consume the ~daily interval, so nothing
+            // got archived until the next day.
+            void this.importOnStartup().finally(() => void this.maybeRunLifecycle());
         });
     }
 

@@ -55,6 +55,7 @@ export interface GoogleEvent {
     end?: GoogleEventDateTime;
     attendees?: GoogleEventAttendee[];
     recurrence?: string[];
+    recurringEventId?: string; // set on expanded instances of a recurring series
 }
 
 export interface GoogleTask {

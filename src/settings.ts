@@ -2,6 +2,7 @@ import { App, Notice, PluginSettingTab, Setting } from "obsidian";
 import GoogleSyncPlugin from "./main";
 import { CalendarListEntry } from "./google/calendar";
 import { TaskListEntry } from "./google/tasks";
+import { RecurringFilterMode } from "./sync/recurrence";
 
 export interface GoogleSyncSettings {
     // OAuth (BYO Google "Web application" client + self-hosted bridge redirect)
@@ -22,6 +23,10 @@ export interface GoogleSyncSettings {
     importOnStartup: boolean;
     importOnlyDefaultCalendar: boolean;
     importOnlyDefaultTaskList: boolean;
+    importPastDays: number;
+    importFutureDays: number;
+    recurringEventFilterMode: RecurringFilterMode;
+    recurringEventFilters: string[];
     autoArchiveEnabled: boolean;
     autoArchiveDaysPast: number;
     autoCloseTasksOnArchive: boolean;
@@ -50,6 +55,10 @@ export const DEFAULT_SETTINGS: GoogleSyncSettings = {
     importOnStartup: false,
     importOnlyDefaultCalendar: true,
     importOnlyDefaultTaskList: true,
+    importPastDays: 7,
+    importFutureDays: 90,
+    recurringEventFilterMode: "allow",
+    recurringEventFilters: [],
     autoArchiveEnabled: true,
     autoArchiveDaysPast: 1,
     autoCloseTasksOnArchive: true,
@@ -141,6 +150,42 @@ export class GoogleSyncSettingTab extends PluginSettingTab {
                     this.plugin.scheduleSaveSettings();
                 }),
             );
+    }
+
+    private number(
+        name: string,
+        desc: string,
+        key: "importPastDays" | "importFutureDays" | "autoArchiveDaysPast",
+        fallback: number,
+    ): void {
+        new Setting(this.containerEl)
+            .setName(name)
+            .setDesc(desc)
+            .addText((t) =>
+                t.setValue(String(this.plugin.settings[key])).onChange(async (value) => {
+                    const n = Number(value);
+                    this.plugin.settings[key] = Number.isFinite(n) && n >= 0 ? n : fallback;
+                    this.plugin.scheduleSaveSettings();
+                }),
+            );
+    }
+
+    private list(name: string, desc: string, key: "recurringEventFilters", placeholder = ""): void {
+        new Setting(this.containerEl)
+            .setName(name)
+            .setDesc(desc)
+            .addTextArea((t) => {
+                t.setPlaceholder(placeholder)
+                    .setValue((this.plugin.settings[key] ?? []).join("\n"))
+                    .onChange(async (value) => {
+                        this.plugin.settings[key] = value
+                            .split("\n")
+                            .map((s) => s.trim())
+                            .filter((s) => s.length > 0);
+                        this.plugin.scheduleSaveSettings();
+                    });
+                t.inputEl.rows = 4;
+            });
     }
 
     display(): void {
@@ -254,6 +299,39 @@ export class GoogleSyncSettingTab extends PluginSettingTab {
             "When importing from Google, only pull tasks from the task list above.",
             "importOnlyDefaultTaskList",
         );
+        this.number(
+            "Import window — days past",
+            "How many days of past calendar events to import. Recurring events are expanded, so a wide window pulls a lot of notes.",
+            "importPastDays",
+            7,
+        );
+        this.number(
+            "Import window — days ahead",
+            "How many days of upcoming calendar events to import.",
+            "importFutureDays",
+            90,
+        );
+        new Setting(containerEl)
+            .setName("Recurring event filter")
+            .setDesc(
+                "Allowlist: import only recurring events whose title matches. Blocklist: import every recurring event except matches.",
+            )
+            .addDropdown((d) =>
+                d
+                    .addOption("allow", "Allowlist")
+                    .addOption("block", "Blocklist")
+                    .setValue(this.plugin.settings.recurringEventFilterMode)
+                    .onChange(async (v) => {
+                        this.plugin.settings.recurringEventFilterMode = v as RecurringFilterMode;
+                        this.plugin.scheduleSaveSettings();
+                    }),
+            );
+        this.list(
+            "Recurring event titles",
+            "One title per line (use * as a wildcard, e.g. Weekly*). Matched against recurring event titles for the filter above; one-off events are always imported. Empty allowlist imports no recurring events; empty blocklist imports all of them.",
+            "recurringEventFilters",
+            "Weekly 1:1\nStandup*",
+        );
         this.toggle(
             "Auto-archive past events",
             "Move past events to an archive folder daily.",
@@ -264,17 +342,11 @@ export class GoogleSyncSettingTab extends PluginSettingTab {
             "Complete tasks listed in an event's `tasks` field when it archives.",
             "autoCloseTasksOnArchive",
         );
-        new Setting(containerEl)
-            .setName("Archive after days past")
-            .setDesc("Days after an event's date before it is archived.")
-            .addText((t) =>
-                t
-                    .setValue(String(this.plugin.settings.autoArchiveDaysPast))
-                    .onChange(async (value) => {
-                        const n = Number(value);
-                        this.plugin.settings.autoArchiveDaysPast = Number.isFinite(n) ? n : 1;
-                        this.plugin.scheduleSaveSettings();
-                    }),
-            );
+        this.number(
+            "Archive after days past",
+            "Days after an event's date before it is archived.",
+            "autoArchiveDaysPast",
+            1,
+        );
     }
 }
