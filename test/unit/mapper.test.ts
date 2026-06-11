@@ -311,6 +311,16 @@ describe("taskToGoogle", () => {
         const t = taskToGoogle({ title: "Sub", parent: "[[Parent]]" }, NZ);
         expect(t).to.not.have.property("parent");
     });
+
+    it("keeps the calendar date of an imported UTC-midnight due in a behind-UTC zone", () => {
+        // Regression: a re-synced imported due ("...T00:00:00.000Z") parsed into e.g.
+        // America/New_York rolled back to the previous day on every patch.
+        const t = taskToGoogle(
+            { title: "X", due: "2026-06-10T00:00:00.000Z" },
+            "America/New_York",
+        );
+        expect(t.due).to.equal("2026-06-10T00:00:00.000Z");
+    });
 });
 
 describe("remoteTaskToNote", () => {
@@ -325,7 +335,8 @@ describe("remoteTaskToNote", () => {
         );
         expect(fm.title).to.equal("Buy milk");
         expect(fm.notes).to.equal("2%");
-        expect(fm.due).to.equal("2026-06-01T00:00:00.000Z");
+        // Date-only: re-syncing from a behind-UTC zone must not shift the date back a day.
+        expect(fm.due).to.equal("2026-06-01");
         expect(fm.tasklist).to.equal("L1");
         expect(fm.parent).to.equal(undefined);
     });
@@ -373,6 +384,15 @@ describe("mergeManagedFrontmatter", () => {
         // unmanaged: preserved
         expect(merged.related).to.equal("[[Some concept]]");
         expect(merged.tags).to.deep.equal(["wiki", "setup"]);
+    });
+
+    it("preserves a manually-set syncDirection across re-import", () => {
+        const merged = mergeManagedFrontmatter(
+            { title: "old", googleId: "t1", syncDirection: "pull-only" },
+            { title: "new", googleId: "t1" },
+            "task",
+        );
+        expect(merged.syncDirection).to.equal("pull-only");
     });
 
     it("preserves the event `tasks` link field and other user keys across import", () => {

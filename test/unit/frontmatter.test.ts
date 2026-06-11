@@ -47,6 +47,15 @@ describe("validateEvent", () => {
         expect(r.value?.title).to.equal("Standup");
         expect((r.value as Record<string, unknown>).color).to.equal("#bf40bf");
     });
+    it("rejects unparseable date and end up front (not at sync time)", () => {
+        const badDate = validateEvent({ title: "X", date: "next tuesday" });
+        expect(badDate.ok).to.equal(false);
+        expect(badDate.errors.join(" ")).to.contain("not a valid date");
+
+        const badEnd = validateEvent({ title: "X", date: "2026-06-02", end: "??" });
+        expect(badEnd.ok).to.equal(false);
+        expect(badEnd.errors.join(" ")).to.contain("`end`");
+    });
 });
 
 describe("validateTask", () => {
@@ -61,5 +70,10 @@ describe("validateTask", () => {
         const r = validateTask({ title: "Buy milk", completed: false });
         expect(r.ok).to.equal(true);
         expect(r.value?.title).to.equal("Buy milk");
+    });
+    it("rejects an unparseable due date", () => {
+        const r = validateTask({ title: "Buy milk", due: "whenever" });
+        expect(r.ok).to.equal(false);
+        expect(r.errors.join(" ")).to.contain("not a valid date");
     });
 });

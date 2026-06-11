@@ -104,7 +104,7 @@ describe("Google import sync", () => {
 
         expect(fm).to.deep.equal({
             title: "Buy milk",
-            due: "2026-06-01T00:00:00.000Z",
+            due: "2026-06-01",
             notes: "Oat",
             completed: true,
             status: "completed",

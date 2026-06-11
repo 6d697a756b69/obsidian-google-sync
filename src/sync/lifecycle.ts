@@ -39,17 +39,38 @@ export class Lifecycle {
         const counts: LifecycleCounts = { archived: 0, overdue: 0, completed: 0 };
 
         for (const action of actions) {
-            const file = this.app.vault.getAbstractFileByPath(action.path);
-            if (!(file instanceof TFile)) continue;
-            if (action.type === "archive" && action.closeTasks.length && s.taskListId) {
-                for (const basename of action.closeTasks) await this.closeLinkedTask(basename, s);
+            // Each action is isolated: one failing move (e.g. a stale plan entry or a
+            // filesystem error) must not abort the remaining moves.
+            try {
+                const file = this.app.vault.getAbstractFileByPath(action.path);
+                if (!(file instanceof TFile)) continue;
+                if (action.type === "archive" && action.closeTasks.length && s.taskListId) {
+                    for (const basename of action.closeTasks)
+                        await this.closeLinkedTask(basename, s);
+                }
+                await moveFile(this.app, file, this.unusedDestination(action.newPath));
+                if (action.type === "archive") counts.archived++;
+                else if (action.type === "overdue") counts.overdue++;
+                else counts.completed++;
+            } catch (e) {
+                console.error("[google-sync] lifecycle move failed for", action.path, e);
             }
-            await moveFile(this.app, file, action.newPath);
-            if (action.type === "archive") counts.archived++;
-            else if (action.type === "overdue") counts.overdue++;
-            else counts.completed++;
         }
         return counts;
+    }
+
+    /** Suffix the destination (-2, -3, …) when a note with the same name is already filed. */
+    private unusedDestination(preferred: string): string {
+        const normalized = normalizePath(preferred);
+        if (!this.app.vault.getAbstractFileByPath(normalized)) return normalized;
+        const dot = normalized.lastIndexOf(".");
+        const stem = dot === -1 ? normalized : normalized.slice(0, dot);
+        const ext = dot === -1 ? "" : normalized.slice(dot);
+        for (let i = 2; i < 1000; i++) {
+            const candidate = `${stem}-${i}${ext}`;
+            if (!this.app.vault.getAbstractFileByPath(candidate)) return candidate;
+        }
+        throw new Error(`No unused lifecycle destination for ${normalized}`);
     }
 
     private async closeLinkedTask(basename: string, s: GoogleSyncSettings): Promise<void> {
