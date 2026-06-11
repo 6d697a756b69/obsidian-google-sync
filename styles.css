@@ -1,8 +1,5 @@
-/*
-
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
-
-If your plugin does not need CSS, delete this file.
-
-*/
+/* Inline validation state for Google sync settings inputs. */
+.gsync-invalid {
+    border-color: var(--text-error) !important;
+    box-shadow: 0 0 0 1px var(--text-error);
+}

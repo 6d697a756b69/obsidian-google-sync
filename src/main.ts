@@ -9,13 +9,16 @@ import { SyncRouter } from "./sync/router";
 import { Lifecycle } from "./sync/lifecycle";
 import { GoogleImporter } from "./sync/importer";
 import { SyncSuppressor } from "./sync/suppression";
+import { BaselineStore, GoogleBody } from "./sync/baseline";
 import { registerCommands } from "./commands";
-import { readFrontmatter } from "./io";
+import { ObsidianVaultPort } from "./vault/obsidian-port";
 
 interface PersistedData {
     settings: GoogleSyncSettings;
     tokens: TokenSet | null;
     lastLifecycleRun?: number;
+    /** Per-note last-pushed/imported Google bodies (the diff-patching baselines). */
+    baselines?: Record<string, GoogleBody>;
 }
 
 const DEBOUNCE_MS = 750;
@@ -28,8 +31,10 @@ const LIFECYCLE_CHECK_MS = 60 * 60 * 1000; // hourly tick
 const LIFECYCLE_MIN_INTERVAL_MS = 23 * 60 * 60 * 1000; // ~daily
 
 /**
- * Google Calendar/Tasks sync. Obsidian -> Google, desktop + iOS. main.ts only wires
- * lifecycle + services; logic lives in src/google and src/sync.
+ * Google Calendar/Tasks sync, desktop + iOS. Google is the source of truth for existence:
+ * imports pull events/tasks into the vault, edits to linked notes patch back, and nothing
+ * here ever creates or deletes a Google object. main.ts only wires lifecycle + services;
+ * logic lives in src/google and src/sync.
  */
 export default class GoogleSyncPlugin extends Plugin {
     settings: GoogleSyncSettings = { ...DEFAULT_SETTINGS };
@@ -37,10 +42,12 @@ export default class GoogleSyncPlugin extends Plugin {
     private auth!: GoogleAuth;
     private calendar!: GoogleCalendarClient;
     private tasks!: GoogleTasksClient;
+    private port!: ObsidianVaultPort;
     private router!: SyncRouter;
     private lifecycle!: Lifecycle;
     private importer!: GoogleImporter;
     private lastLifecycleRun = 0;
+    private baselines: Record<string, GoogleBody> = {};
     private suppressor = new SyncSuppressor(SYNC_SUPPRESS_MS);
     private timers = new Map<string, number>();
     private settingsSaveTimer: number | null = null;
@@ -61,23 +68,28 @@ export default class GoogleSyncPlugin extends Plugin {
         this.calendar = new GoogleCalendarClient(http, tokenProvider);
         this.tasks = new GoogleTasksClient(http, tokenProvider);
         const suppress = (path: string) => this.suppressor.suppress(path, Date.now());
+        const notice = (m: string) => {
+            new Notice(m);
+        };
+        this.port = new ObsidianVaultPort(this.app);
+        const baselines = this.baselineStore();
         this.router = new SyncRouter(
-            this.app,
+            this.port,
             this.calendar,
             this.tasks,
             () => this.settings,
-            (m) => {
-                new Notice(m);
-            },
+            baselines,
+            notice,
             suppress,
         );
-        this.lifecycle = new Lifecycle(this.app, this.tasks, () => this.settings);
+        this.lifecycle = new Lifecycle(this.port, this.tasks, () => this.settings, notice);
         this.importer = new GoogleImporter(
-            this.app,
+            this.port,
             this.calendar,
             this.tasks,
             () => this.settings,
             suppress,
+            baselines,
         );
 
         this.addSettingTab(new GoogleSyncSettingTab(this.app, this));
@@ -91,7 +103,6 @@ export default class GoogleSyncPlugin extends Plugin {
             window.setInterval(() => void this.maybeRunLifecycle(), LIFECYCLE_CHECK_MS),
         );
         this.app.workspace.onLayoutReady(() => {
-            this.router.buildIndex();
             // Run the startup import first, THEN the standalone lifecycle. Firing both
             // concurrently let the lifecycle scan before the import had written any notes —
             // it would archive nothing and still consume the ~daily interval, so nothing
@@ -122,6 +133,7 @@ export default class GoogleSyncPlugin extends Plugin {
         this.settings = { ...DEFAULT_SETTINGS, ...(data?.settings ?? {}) };
         this.tokens = data?.tokens ?? null;
         this.lastLifecycleRun = data?.lastLifecycleRun ?? 0;
+        this.baselines = data?.baselines ?? {};
     }
 
     private async saveAll(): Promise<void> {
@@ -129,8 +141,20 @@ export default class GoogleSyncPlugin extends Plugin {
             settings: this.settings,
             tokens: this.tokens,
             lastLifecycleRun: this.lastLifecycleRun,
+            baselines: this.baselines,
         };
         await this.saveData(data);
+    }
+
+    /** Baselines live in data.json; writes are debounced through the settings-save timer. */
+    private baselineStore(): BaselineStore {
+        return {
+            get: async (path) => this.baselines[path],
+            set: async (path, body) => {
+                this.baselines[path] = body;
+                this.scheduleSaveSettings();
+            },
+        };
     }
 
     async saveSettings(): Promise<void> {
@@ -288,17 +312,44 @@ export default class GoogleSyncPlugin extends Plugin {
         }
     }
 
-    async syncNow(): Promise<void> {
+    async syncNow(confirmed = false): Promise<void> {
         if (!(await this.auth.isConnected())) {
             new Notice("Connect to Google first.");
             return;
         }
         try {
-            const { synced, failed } = await this.router.syncAll();
+            const { synced, failed, blocked } = await this.router.syncAll({ confirmed });
+            if (blocked.length) return; // the router already explained the guard
             new Notice(
                 failed > 0
-                    ? `google-sync: synced ${synced}, ${failed} failed (see console).`
-                    : `google-sync: synced ${synced} note(s).`,
+                    ? `google-sync: pushed ${synced} update(s), ${failed} failed (see console).`
+                    : `google-sync: pushed ${synced} update(s).`,
+            );
+        } catch (e) {
+            new Notice(`google-sync error: ${(e as Error).message}`);
+        }
+    }
+
+    /** Dry run: list what a push would change, without sending anything to Google. */
+    async previewPending(): Promise<void> {
+        if (!(await this.auth.isConnected())) {
+            new Notice("Connect to Google first.");
+            return;
+        }
+        try {
+            const pending = await this.router.previewAll();
+            if (!pending.length) {
+                new Notice("google-sync: everything is up to date — nothing to push.");
+                return;
+            }
+            const lines = pending.map(
+                (p) =>
+                    `${p.path}: ${p.veto ? `BLOCKED (${p.veto})` : p.changedKeys.join(", ") || "(meet link request)"}`,
+            );
+            console.info("[google-sync] pending updates:\n" + lines.join("\n"));
+            new Notice(
+                `google-sync: ${pending.length} note(s) have pending updates (details in console).`,
+                8000,
             );
         } catch (e) {
             new Notice(`google-sync error: ${(e as Error).message}`);
@@ -311,17 +362,20 @@ export default class GoogleSyncPlugin extends Plugin {
             return;
         }
         try {
-            const { events, tasks, failed, lifecycleCounts } = await this.runImportPipeline();
+            const { events, tasks, failed, orphaned, lifecycleCounts } =
+                await this.runImportPipeline();
             const moved =
                 lifecycleCounts.archived + lifecycleCounts.overdue + lifecycleCounts.completed;
             const lifecycleSuffix =
                 moved > 0
                     ? ` Lifecycle moved ${lifecycleCounts.archived} archived, ${lifecycleCounts.overdue} overdue, ${lifecycleCounts.completed} completed.`
                     : "";
+            const orphanSuffix =
+                orphaned > 0 ? ` ${orphaned} note(s) filed to orphaned/ (deleted in Google).` : "";
             new Notice(
                 failed > 0
-                    ? `google-sync: imported ${events} event(s), ${tasks} task(s), ${failed} failed.${lifecycleSuffix}`
-                    : `google-sync: imported ${events} event(s) and ${tasks} task(s).${lifecycleSuffix}`,
+                    ? `google-sync: imported ${events} event(s), ${tasks} task(s), ${failed} failed.${orphanSuffix}${lifecycleSuffix}`
+                    : `google-sync: imported ${events} event(s) and ${tasks} task(s).${orphanSuffix}${lifecycleSuffix}`,
             );
         } catch (e) {
             new Notice(`google-sync import error: ${(e as Error).message}`);
@@ -347,6 +401,7 @@ export default class GoogleSyncPlugin extends Plugin {
         events: number;
         tasks: number;
         failed: number;
+        orphaned: number;
         lifecycleCounts: Awaited<ReturnType<Lifecycle["runOnce"]>>;
     }> {
         if (this.importInFlight) {
@@ -355,6 +410,7 @@ export default class GoogleSyncPlugin extends Plugin {
                 events: 0,
                 tasks: 0,
                 failed: 0,
+                orphaned: 0,
                 lifecycleCounts: { archived: 0, overdue: 0, completed: 0 },
             };
         }
@@ -362,10 +418,11 @@ export default class GoogleSyncPlugin extends Plugin {
             events: number;
             tasks: number;
             failed: number;
+            orphaned: number;
             lifecycleCounts: Awaited<ReturnType<Lifecycle["runOnce"]>>;
         };
         this.importInFlight = (async () => {
-            const { events, tasks, failed } = await this.importer.importAll({
+            const { events, tasks, failed, orphaned } = await this.importer.importAll({
                 createOnly: options.createOnly,
             });
             const addedOrUpdated = events + tasks;
@@ -377,8 +434,7 @@ export default class GoogleSyncPlugin extends Plugin {
                 this.lastLifecycleRun = Date.now();
                 await this.saveAll();
             }
-            this.router.buildIndex();
-            result = { events, tasks, failed, lifecycleCounts };
+            result = { events, tasks, failed, orphaned, lifecycleCounts };
         })();
         try {
             await this.importInFlight;
@@ -420,7 +476,6 @@ export default class GoogleSyncPlugin extends Plugin {
             expiresAt: Date.now() + 3600_000,
         };
         await this.saveAll();
-        this.router.buildIndex();
     }
 
     // ---- internals ----
@@ -433,7 +488,6 @@ export default class GoogleSyncPlugin extends Plugin {
         if (!params.code || !params.state) return;
         try {
             await this.auth.completeAuth(params.code, params.state);
-            this.router.buildIndex();
             new Notice("Connected to Google.");
         } catch (e) {
             new Notice(`Google auth failed: ${(e as Error).message}`);
@@ -444,9 +498,12 @@ export default class GoogleSyncPlugin extends Plugin {
     }
 
     private registerVaultEvents(): void {
+        // Creation and deletion never touch Google: a created note with a googleId (e.g.
+        // arriving via git/Obsidian Sync) is patched like an edit, one without is a no-op
+        // in the router, and deleting a note leaves the Google item alone.
         this.registerEvent(
             this.app.vault.on("create", (f) => {
-                if (f instanceof TFile && this.settings.syncOnCreate && !this.isSuppressed(f.path))
+                if (f instanceof TFile && this.settings.syncOnModify && !this.isSuppressed(f.path))
                     this.debounceSync(f);
             }),
         );
@@ -457,13 +514,8 @@ export default class GoogleSyncPlugin extends Plugin {
             }),
         );
         this.registerEvent(
-            this.app.vault.on("delete", (f) => {
-                if (f instanceof TFile && this.settings.syncOnDelete) void this.safeDelete(f.path);
-            }),
-        );
-        this.registerEvent(
-            this.app.vault.on("rename", (f, oldPath) => {
-                if (f instanceof TFile) void this.safeRename(f, oldPath);
+            this.app.vault.on("rename", (f) => {
+                if (f instanceof TFile) void this.safeRename(f);
             }),
         );
     }
@@ -488,7 +540,7 @@ export default class GoogleSyncPlugin extends Plugin {
         if (!this.router.syncKind(file.path)) return;
         if (!(await this.auth.isConnected())) return;
         try {
-            await this.router.syncFile(file);
+            await this.router.syncPath(file.path);
             await this.maybeFileCompletedTask(file);
         } catch (e) {
             new Notice(`google-sync: ${(e as Error).message}`);
@@ -504,24 +556,15 @@ export default class GoogleSyncPlugin extends Plugin {
     private async maybeFileCompletedTask(file: TFile): Promise<void> {
         if (!this.settings.autoArchiveEnabled) return;
         if (this.router.syncKind(file.path) !== "task") return;
-        const fm = await readFrontmatter(this.app, file);
+        const fm = await this.port.readFrontmatter(file.path);
         if (fm.completed !== true && fm.status !== "completed") return;
         await this.runLifecycle(false);
     }
 
-    private async safeDelete(path: string): Promise<void> {
+    private async safeRename(file: TFile): Promise<void> {
         if (!(await this.auth.isConnected())) return;
         try {
-            await this.router.handleDelete(path);
-        } catch (e) {
-            new Notice(`google-sync: ${(e as Error).message}`);
-        }
-    }
-
-    private async safeRename(file: TFile, oldPath: string): Promise<void> {
-        if (!(await this.auth.isConnected())) return;
-        try {
-            await this.router.handleRename(file, oldPath);
+            await this.router.syncPath(file.path);
         } catch (e) {
             new Notice(`google-sync: ${(e as Error).message}`);
         }

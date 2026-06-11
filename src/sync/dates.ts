@@ -12,6 +12,11 @@ function parse(iso: string, zone: string): DateTime {
     return dt;
 }
 
+/** True when the string parses as an ISO date/datetime. Used by frontmatter validation. */
+export function isValidIsoDate(iso: string): boolean {
+    return DateTime.fromISO(iso).isValid;
+}
+
 /**
  * Build a Google event start/end object from a local ISO string + IANA timezone.
  * All-day events use { date: "YYYY-MM-DD" }; timed events use { dateTime, timeZone }.
@@ -43,7 +48,14 @@ export function allDayEnd(localIso: string, zone: string): GoogleEventDateTime {
  * shows it due "today").
  */
 export function taskDue(localIso: string, zone: string): string {
-    const date = parse(localIso, zone).toISODate();
+    // setZone keeps an explicit offset in the string (e.g. an imported
+    // "2026-06-10T00:00:00.000Z") so its own calendar date wins; converting that
+    // instant into a behind-UTC local zone would shift the due date back a day.
+    const dt = DateTime.fromISO(localIso, { zone, setZone: true });
+    if (!dt.isValid) {
+        throw new DateParseError(`Invalid due "${localIso}" (${dt.invalidReason ?? "unknown"})`);
+    }
+    const date = dt.toISODate();
     if (!date) throw new DateParseError(`Invalid due "${localIso}"`);
     return `${date}T00:00:00.000Z`;
 }

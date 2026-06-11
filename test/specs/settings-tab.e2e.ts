@@ -79,15 +79,15 @@ describe("settings tab (UI)", function () {
             "Default calendar",
             "Task list",
             "Default timezone",
-            "Sync on create",
-            "Sync on modify",
-            "Sync on delete",
+            "Push local edits to Google",
+            "Mass-update guard",
             "Import from Google on startup",
             "Import only configured calendar",
             "Import only configured task list",
             "Auto-archive past events",
             "Auto-close linked tasks on archive",
             "Archive after days past",
+            "Reset to defaults",
         ];
         for (const label of expected) {
             expect(r.labels).toContain(label);

@@ -1,4 +1,5 @@
 import { EventFrontmatter, NoteKind, TaskFrontmatter } from "../types";
+import { isValidIsoDate } from "./dates";
 
 function trimSlashes(s: string): string {
     return s.replace(/^\/+|\/+$/g, "");
@@ -18,8 +19,8 @@ export function detectKind(
     return null;
 }
 
-/** Lifecycle subfolders that hold already-moved notes and should not be synced on change. */
-const MANAGED_SUBFOLDERS = ["archive", "overdue", "completed"];
+/** Managed subfolders that hold already-filed notes and should not be synced on change. */
+const MANAGED_SUBFOLDERS = ["archive", "overdue", "completed", "orphaned"];
 
 export function isManagedSubpath(path: string, eventsFolder: string, tasksFolder: string): boolean {
     const p = trimSlashes(path);
@@ -50,7 +51,10 @@ export function validateEvent(fm: Record<string, unknown>): ValidationResult<Eve
     requireTitle(fm, errors);
     if (fm.date == null) errors.push("`date` is required");
     else if (typeof fm.date !== "string") errors.push("`date` must be a string");
+    else if (!isValidIsoDate(fm.date)) errors.push(`\`date\` is not a valid date: "${fm.date}"`);
     if (fm.end != null && typeof fm.end !== "string") errors.push("`end` must be a string");
+    else if (typeof fm.end === "string" && !isValidIsoDate(fm.end))
+        errors.push(`\`end\` is not a valid date: "${fm.end}"`);
     if (errors.length) return { ok: false, errors };
     return { ok: true, value: fm as EventFrontmatter, errors: [] };
 }
@@ -60,6 +64,8 @@ export function validateTask(fm: Record<string, unknown>): ValidationResult<Task
     const errors: string[] = [];
     requireTitle(fm, errors);
     if (fm.due != null && typeof fm.due !== "string") errors.push("`due` must be a string");
+    else if (typeof fm.due === "string" && !isValidIsoDate(fm.due))
+        errors.push(`\`due\` is not a valid date: "${fm.due}"`);
     if (fm.completed != null && typeof fm.completed !== "boolean") {
         errors.push("`completed` must be a boolean");
     }

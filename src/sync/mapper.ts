@@ -116,7 +116,6 @@ export function remoteEventToNote(event: GoogleEvent, calendarId: string): Event
     const fm: EventFrontmatter = {
         title: event.summary || "Untitled event",
         calendarId,
-        syncDirection: "pull-only",
     };
 
     if (event.id) fm.googleId = event.id;
@@ -177,7 +176,8 @@ export function remoteEventToNote(event: GoogleEvent, calendarId: string): Event
 /**
  * Frontmatter keys the plugin owns for each note kind. On import these are taken
  * authoritatively from Google (so Google can set *or clear* them); every other key —
- * user-authored properties, tags, wiki links, the event `tasks` link field — is preserved.
+ * user-authored properties, tags, wiki links, the event `tasks` link field, a per-note
+ * `syncDirection` opt-out — is preserved.
  */
 export const EVENT_MANAGED_KEYS = [
     "title",
@@ -203,7 +203,6 @@ export const EVENT_MANAGED_KEYS = [
     "meetLink",
     "attachments",
     "source",
-    "syncDirection",
 ] as const;
 
 export const TASK_MANAGED_KEYS = [
@@ -216,7 +215,6 @@ export const TASK_MANAGED_KEYS = [
     "notes",
     "parent",
     "position",
-    "syncDirection",
 ] as const;
 
 /**
@@ -252,11 +250,12 @@ export function remoteTaskToNote(
         title: task.title || "Untitled task",
         completed: task.status === "completed",
         status: task.status || "needsAction",
-        syncDirection: "pull-only",
     };
     if (task.id) fm.googleId = task.id;
     if (taskListId) fm.tasklist = taskListId;
-    if (task.due) fm.due = task.due;
+    // Google's `due` is RFC3339 at UTC midnight but only the date part is honored.
+    // Write just the date so re-syncing from a behind-UTC zone can't shift it back a day.
+    if (task.due) fm.due = task.due.slice(0, 10);
     if (task.notes != null) fm.notes = task.notes;
     if (task.parent && parentBasename) fm.parent = `[[${parentBasename}]]`;
     if (task.position != null) fm.position = task.position;

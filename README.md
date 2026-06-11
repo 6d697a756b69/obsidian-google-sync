@@ -6,23 +6,20 @@ This plugin is for people who like planning in Markdown but still want their cal
 
 ## What it syncs
 
-- 📅 Notes in **`events/`** become Google Calendar events.
-- ✅ Notes in **`tasks/`** become Google Tasks.
-- Editing a synced note updates Google.
-- Deleting or renaming a synced note updates Google.
-- Google events/tasks can be imported into your vault.
+- 📅 Google Calendar events become notes in **`events/`**.
+- ✅ Google Tasks become notes in **`tasks/`**.
+- Editing an imported note (one with a `googleId`) updates the Google item — change fields, complete/uncomplete tasks, link tasks to events.
 - Past events and old tasks can be tidied into archive/overdue/completed folders.
 
 ## Important sync model
 
-This is intentionally conservative so it does not destroy local edits:
+Google is the **source of truth for existence** — the plugin can never create or delete anything in your Google account:
 
-- **Obsidian → Google:** automatic while Obsidian is open, if the matching sync-on-create/modify/delete settings are enabled.
-- **Google → Obsidian:** manual via **Import events and tasks from Google**.
-- **Google → Obsidian on startup:** optional and off by default. When enabled, it only creates new missing notes and does **not** overwrite existing notes.
-- **Imported notes are pull-only by default:** notes created from Google include `syncDirection: pull-only` so template rewrites, Obsidian Sync churn, or accidental edits do not immediately PATCH read-only/old Google events. Delete that field or set it to `two-way` on a note if you intentionally want edits to that imported note to push back to Google.
-
-If you need a full two-way merge workflow, test carefully with a spare calendar/list first.
+- **Google → Obsidian:** import creates and updates notes (manual via **Import events and tasks from Google**, or optionally on startup).
+- **Obsidian → Google:** edits to notes that already have a `googleId` are pushed as updates while Obsidian is open (toggleable). Notes without a `googleId` are local-only; deleting or renaming a note never touches Google.
+- **Per-note opt-out:** set `syncDirection: pull-only` in a note's frontmatter to stop its edits from pushing to Google (imports still update it).
+- **Deletions in Google:** when an event/task is deleted on the Google side, its note is moved to an `orphaned/` subfolder on the next import — never deleted.
+- **Corruption guards:** pushes are diff-based (only fields you actually changed are sent, verified against the last imported state), patches that look like template clobbers are refused, and more than a configurable number of pending updates in one run requires explicit confirmation (**Push pending updates (confirmed)**). **Preview pending Google updates** shows a dry run.
 
 ## Import settings
 
@@ -34,7 +31,7 @@ When pulling from Google (manual import or import-on-startup), these settings ke
     - **Blocklist:** import every recurring event _except_ those whose title matches. An empty blocklist imports them all.
 - **Recurring event titles:** one title per line, with `*` as a wildcard (e.g. `Weekly*`, `Standup*`). Used by whichever mode is selected above. Matching is case-insensitive.
 
-These only affect what is _imported from_ Google. Notes you author locally always sync up regardless of these settings.
+These only affect what is _imported from_ Google.
 
 ## Install
 
@@ -130,16 +127,20 @@ The defaults are:
 ```text
 events/
 events/archive/
+events/orphaned/
 tasks/
 tasks/overdue/
 tasks/completed/
+tasks/orphaned/
 ```
+
+`orphaned/` holds notes whose Google item was deleted on the Google side: an import confirms the deletion with a direct lookup, then files the note there instead of deleting anything locally.
 
 You can change the folder names in plugin settings before you start syncing.
 
 ## Event note example
 
-Create a Markdown file under `events/`:
+An imported event note under `events/` looks like this — edit any of these fields and the change is pushed to the Google event:
 
 ```yaml
 ---
@@ -199,11 +200,11 @@ recurrence:
 - **Source:** a `source: { title, url }` linking the event back to where it came from.
 - **transparency:** `opaque` (busy) or `transparent` (free).
 
-After syncing, the plugin writes a `googleId` field into the frontmatter. Leave that field alone; it is how the plugin knows which Google event belongs to the note.
+The import writes a `googleId` field into the frontmatter. Leave that field alone; it is how the plugin knows which Google event belongs to the note — and only notes that have one push updates.
 
 ## Task note example
 
-Create a Markdown file under `tasks/`:
+An imported task note under `tasks/` looks like this:
 
 ```yaml
 ---
@@ -228,7 +229,7 @@ parent: "[[Renew registration]]"
 ---
 ```
 
-On sync the plugin nests it under the parent in Google Tasks (the parent must have synced at least once so it has a `googleId`). Subtasks imported from Google get their `parent` wikilink written back automatically.
+On sync the plugin nests it under the parent in Google Tasks (both notes must be linked to Google, i.e. have a `googleId`). Subtasks imported from Google get their `parent` wikilink written back automatically.
 
 ## Linking tasks to events
 
@@ -265,8 +266,29 @@ Entries can be Obsidian wikilinks (so they also show up in the graph) or plain n
 - If a note does not sync, check that it is under the configured `events/` or `tasks/` folder and has the required frontmatter fields.
 - If event times look wrong, add an explicit `timezone` such as `Pacific/Auckland`.
 - Task `due` dates are date-only in Google Tasks. The plugin preserves the calendar date you set (no off-by-one in timezones ahead of UTC); upgrade to 0.1.13+ if "due tomorrow" ever showed as today.
-- If imported notes get overwritten back to a template (e.g. `title: Event title`), see the Templater warning in the [Templater setup guide](https://github.com/Cordedmink2/obsidian-google-sync/blob/main/docs/templater-setup.md) — don't pair folder templates + trigger-on-creation with Import from Google. Version 0.2.1+ also marks imported notes `syncDirection: pull-only` to prevent those local clobbers from being PATCHed back to Google.
+- If imported notes get overwritten back to a template (e.g. `title: Event title`), see the Templater warning in the [Templater setup guide](https://github.com/Cordedmink2/obsidian-google-sync/blob/main/docs/templater-setup.md) — don't pair folder templates + trigger-on-creation with Import from Google. Re-running the import restores the real Google data into clobbered notes.
 - Test with a spare Google calendar/task list before using important real data.
+
+## Headless sync (server / cron)
+
+The same sync can run on a server without Obsidian — importing into the vault, pushing
+updates, filing lifecycle/orphan moves, and committing + pushing the vault's git repo on
+a schedule. Build with `npm run build:headless` and see the
+[headless guide](https://github.com/Cordedmink2/obsidian-google-sync/blob/main/docs/headless.md)
+for config, one-time authorization, and cron/systemd examples.
+
+## AI agent skill
+
+`skill/google-tasks-calendar/` is a SKILL.md-format skill that gives AI agents
+(Claude Code, Codex, OpenClaw, Hermes, …) create/read/update access to your Google
+Calendar and Tasks — every writable API field (attendees/invitations, recurrence,
+Meet links, reminders, colors, task details, subtasks), and **no delete capability**.
+Install it into every detected agent with:
+
+```bash
+npm run build:headless
+node scripts/install-skill.mjs        # or --target <skills-dir>, --list
+```
 
 More developer and test notes:
 

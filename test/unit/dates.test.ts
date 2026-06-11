@@ -1,7 +1,14 @@
 import { describe, it } from "mocha";
 import { expect } from "chai";
 import { DateTime } from "luxon";
-import { DateParseError, allDayEnd, eventDateTime, isPast, taskDue } from "../../src/sync/dates";
+import {
+    DateParseError,
+    allDayEnd,
+    eventDateTime,
+    isPast,
+    isValidIsoDate,
+    taskDue,
+} from "../../src/sync/dates";
 
 const NZ = "Pacific/Auckland"; // June = NZST (UTC+12)
 
@@ -41,6 +48,24 @@ describe("taskDue", () => {
         // stay 2026-05-30, not become 2026-05-29 ("due tomorrow" must not show as "today").
         expect(taskDue("2026-05-30", NZ)).to.equal("2026-05-30T00:00:00.000Z");
         expect(taskDue("2026-05-30T00:00:00", NZ)).to.equal("2026-05-30T00:00:00.000Z");
+    });
+
+    it("does not roll an explicit-UTC due back a day for behind-UTC zones", () => {
+        // Regression: an imported due ("...T00:00:00.000Z") re-parsed in America/New_York
+        // became the previous evening local, shifting the due date back on every patch.
+        expect(taskDue("2026-06-10T00:00:00.000Z", "America/New_York")).to.equal(
+            "2026-06-10T00:00:00.000Z",
+        );
+    });
+});
+
+describe("isValidIsoDate", () => {
+    it("accepts dates and datetimes, rejects garbage", () => {
+        expect(isValidIsoDate("2026-06-10")).to.equal(true);
+        expect(isValidIsoDate("2026-06-10T09:30:00")).to.equal(true);
+        expect(isValidIsoDate("2026-06-10T00:00:00.000Z")).to.equal(true);
+        expect(isValidIsoDate("not-a-date")).to.equal(false);
+        expect(isValidIsoDate("2026-13-40")).to.equal(false);
     });
 });
 
