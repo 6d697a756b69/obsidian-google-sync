@@ -18,6 +18,8 @@ Google is the **source of truth for existence** — the plugin can never create 
 - **Google → Obsidian:** import creates and updates notes (manual via **Import events and tasks from Google**, or optionally on startup).
 - **Obsidian → Google:** edits to notes that already have a `googleId` are pushed as updates while Obsidian is open (toggleable). Notes without a `googleId` are local-only; deleting or renaming a note never touches Google.
 - **Per-note opt-out:** set `syncDirection: pull-only` in a note's frontmatter to stop its edits from pushing to Google (imports still update it).
+- **Deletions in Google:** when an event/task is deleted on the Google side, its note is moved to an `orphaned/` subfolder on the next import — never deleted.
+- **Corruption guards:** pushes are diff-based (only fields you actually changed are sent, verified against the last imported state), patches that look like template clobbers are refused, and more than a configurable number of pending updates in one run requires explicit confirmation (**Push pending updates (confirmed)**). **Preview pending Google updates** shows a dry run.
 
 ## Import settings
 
@@ -125,10 +127,14 @@ The defaults are:
 ```text
 events/
 events/archive/
+events/orphaned/
 tasks/
 tasks/overdue/
 tasks/completed/
+tasks/orphaned/
 ```
+
+`orphaned/` holds notes whose Google item was deleted on the Google side: an import confirms the deletion with a direct lookup, then files the note there instead of deleting anything locally.
 
 You can change the folder names in plugin settings before you start syncing.
 

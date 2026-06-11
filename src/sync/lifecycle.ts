@@ -2,7 +2,7 @@ import { DateTime } from "luxon";
 import { GoogleSyncSettings } from "../settings-data";
 import { GoogleTasksClient } from "../google/tasks";
 import { VaultPort } from "../vault/port";
-import { normalizeVaultPath } from "../vault/paths";
+import { unusedPath } from "../vault/unused-path";
 import { detectKind, isManagedSubpath } from "./frontmatter";
 import { LifecycleNote, planLifecycle } from "./lifecycle-plan";
 
@@ -51,7 +51,7 @@ export class Lifecycle {
                     for (const basename of action.closeTasks)
                         await this.closeLinkedTask(basename, s);
                 }
-                await this.port.move(action.path, await this.unusedDestination(action.newPath));
+                await this.port.move(action.path, await unusedPath(this.port, action.newPath));
                 if (action.type === "archive") counts.archived++;
                 else if (action.type === "overdue") counts.overdue++;
                 else counts.completed++;
@@ -60,20 +60,6 @@ export class Lifecycle {
             }
         }
         return counts;
-    }
-
-    /** Suffix the destination (-2, -3, …) when a note with the same name is already filed. */
-    private async unusedDestination(preferred: string): Promise<string> {
-        const normalized = normalizeVaultPath(preferred);
-        if (!(await this.port.exists(normalized))) return normalized;
-        const dot = normalized.lastIndexOf(".");
-        const stem = dot === -1 ? normalized : normalized.slice(0, dot);
-        const ext = dot === -1 ? "" : normalized.slice(dot);
-        for (let i = 2; i < 1000; i++) {
-            const candidate = `${stem}-${i}${ext}`;
-            if (!(await this.port.exists(candidate))) return candidate;
-        }
-        throw new Error(`No unused lifecycle destination for ${normalized}`);
     }
 
     private async closeLinkedTask(basename: string, s: GoogleSyncSettings): Promise<void> {

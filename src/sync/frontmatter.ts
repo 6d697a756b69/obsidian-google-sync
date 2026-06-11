@@ -19,8 +19,8 @@ export function detectKind(
     return null;
 }
 
-/** Lifecycle subfolders that hold already-moved notes and should not be synced on change. */
-const MANAGED_SUBFOLDERS = ["archive", "overdue", "completed"];
+/** Managed subfolders that hold already-filed notes and should not be synced on change. */
+const MANAGED_SUBFOLDERS = ["archive", "overdue", "completed", "orphaned"];
 
 export function isManagedSubpath(path: string, eventsFolder: string, tasksFolder: string): boolean {
     const p = trimSlashes(path);
