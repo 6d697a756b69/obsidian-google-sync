@@ -63,14 +63,13 @@ describe("event sync against mocked Google", function () {
             return m ? m[1] : null;
         });
 
-        const calls = await getMockCalls();
-        const patch = calls.find(
-            (c: MockCall) =>
+        const patch = await waitForMockCall(
+            (c) =>
                 c.method === "PATCH" &&
                 c.url.includes("/events/ev-conf") &&
                 c.url.includes("conferenceDataVersion=1"),
+            "no conferencing patch recorded",
         );
-        if (!patch) throw new Error("no conferencing patch recorded");
         const body = JSON.parse(patch.body ?? "{}") as {
             conferenceData?: { createRequest?: unknown };
         };
@@ -92,11 +91,10 @@ describe("event sync against mocked Google", function () {
             await plugin.syncNow();
         });
 
-        const calls = await getMockCalls();
-        const patch = calls.find(
-            (c: MockCall) => c.method === "PATCH" && c.url.includes("/events/ev-existing"),
+        const patch = await waitForMockCall(
+            (c) => c.method === "PATCH" && c.url.includes("/events/ev-existing"),
+            "no calendar patch recorded",
         );
-        if (!patch) throw new Error("no calendar patch recorded");
         const body = JSON.parse(patch.body ?? "{}") as { summary?: string };
         expect(body.summary).to.equal("Existing");
     });
@@ -124,3 +122,19 @@ describe("event sync against mocked Google", function () {
         expect(del, "note deletion must never delete the Google event").to.equal(undefined);
     });
 });
+
+async function waitForMockCall(
+    predicate: (call: MockCall) => boolean,
+    message: string,
+): Promise<MockCall> {
+    let match: MockCall | undefined;
+    await browser.waitUntil(
+        async () => {
+            const calls = await getMockCalls();
+            match = calls.find(predicate);
+            return match !== undefined;
+        },
+        { timeout: 5000, interval: 250, timeoutMsg: message },
+    );
+    return match as MockCall;
+}
