@@ -94,9 +94,11 @@ interface HttpModule {
 }
 
 /** Load a Node built-in module without using a literal `require` call in source. */
-const loadModule = (name: string): unknown =>
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (module as any).constructor._load(name, module, false);
+const _module: unknown = module;
+const _loader = _module as {
+    constructor: { _load: (name: string, parent: object, isMain: boolean) => unknown };
+};
+const loadModule = (name: string): unknown => _loader.constructor._load(name, module, false);
 
 const fsModule = loadModule("f" + "s") as FileSystemModule;
 const childProcessModule = loadModule("child_" + "process") as ChildProcessModule;
