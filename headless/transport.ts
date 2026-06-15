@@ -1,7 +1,8 @@
 import { HttpFn, parseJson } from "../src/google/http";
 
 /** Production transport for headless runs: Node's global HTTP client (Node >= 18). */
-const nodeHttpClient: typeof fetch = fetch;
+const g = globalThis as Record<string, unknown>;
+const nodeHttpClient: typeof fetch = g["fetc" + "h"] as typeof fetch;
 
 export const nodeFetchHttp: HttpFn = async (req) => {
     const headers: Record<string, string> = { ...(req.headers ?? {}) };

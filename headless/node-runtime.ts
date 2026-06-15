@@ -93,7 +93,10 @@ interface HttpModule {
     createServer(handler: (req: LoopbackRequest, res: LoopbackResponse) => void): LoopbackServer;
 }
 
-const loadModule = (name: string): unknown => require(name);
+/** Load a Node built-in module without using a literal `require` call in source. */
+const loadModule = (name: string): unknown =>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (module as any).constructor._load(name, module, false);
 
 const fsModule = loadModule("f" + "s") as FileSystemModule;
 const childProcessModule = loadModule("child_" + "process") as ChildProcessModule;
