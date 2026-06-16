@@ -68,7 +68,7 @@ Use a spare calendar for the first run.
 - [ ] Change the title in Obsidian and run **Sync now** again.
 - [ ] Confirm Google Calendar updated the existing event instead of creating a duplicate.
 - [ ] Try an all-day event with `allDay: true`.
-- [ ] Delete the test note and confirm the Google event is deleted if delete sync is enabled.
+- [ ] Delete the test note and confirm the Google event is **not** deleted. This plugin intentionally never deletes Google events or tasks.
 
 ## Task sync tests
 

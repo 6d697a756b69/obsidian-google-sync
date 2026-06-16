@@ -6,6 +6,17 @@ import { TaskListEntry } from "./google/tasks";
 import { RecurringFilterMode } from "./sync/recurrence";
 import { DEFAULT_SETTINGS, GoogleSyncSettings, systemTimezone } from "./settings-data";
 import { normalizeVaultPath } from "./vault/paths";
+import { isLikelyClientId, normalizeRedirectUri, redirectUriWarning } from "./setup-checks";
+
+const SETUP_GUIDE_URL =
+    "https://github.com/Cordedmink2/obsidian-google-sync/blob/main/docs/google-setup.md";
+/** Google Cloud / Auth Platform consoles the setup steps point at. */
+const GOOGLE_LINKS: { label: string; url: string }[] = [
+    { label: "Projects", url: "https://console.cloud.google.com/projectselector2/home/dashboard" },
+    { label: "Enable APIs", url: "https://console.cloud.google.com/apis/library" },
+    { label: "Audience (test users)", url: "https://console.cloud.google.com/auth/audience" },
+    { label: "Clients", url: "https://console.cloud.google.com/auth/clients" },
+];
 
 export { DEFAULT_SETTINGS } from "./settings-data";
 export type { GoogleSyncSettings } from "./settings-data";
@@ -236,6 +247,20 @@ export class GoogleSyncSettingTab extends PluginSettingTab {
 
         // --- Account ---
         new Setting(containerEl).setName("Account").setHeading();
+        new Setting(containerEl)
+            .setName("Setup help")
+            .setDesc(
+                "Create a Google Cloud project, enable the Google Calendar API and Google Tasks API, add yourself as a test user, create a web application OAuth client, then paste the values below.",
+            )
+            .addButton((b) =>
+                b.setButtonText("Open setup guide").onClick(() => window.open(SETUP_GUIDE_URL, "_blank")),
+            )
+            .addButton((b) =>
+                b.setButtonText("Google Cloud links").onClick(() => {
+                    for (const link of GOOGLE_LINKS) window.open(link.url, "_blank");
+                    new Notice("Opened Google Cloud setup pages in your browser.");
+                }),
+            );
 
         // NOTE: setDesc must be computed SYNCHRONOUSLY here, not via an async
         // .then() callback after display() returns. Mutating a Setting from a
@@ -271,8 +296,11 @@ export class GoogleSyncSettingTab extends PluginSettingTab {
                 }),
             );
 
-        this.text("OAuth client ID", "From your Google Cloud OAuth client.", "clientId", {
-            validate: (v) => (v.trim() === "" ? "Required to connect" : null),
+        this.text("OAuth client ID", "From your Google Cloud Web application OAuth client.", "clientId", {
+            validate: (v) => {
+                if (v.trim() === "") return "Required to connect";
+                return isLikelyClientId(v) ? null : "Should end in .apps.googleusercontent.com";
+            },
         });
         this.text("OAuth client secret", "From your Google Cloud OAuth client.", "clientSecret", {
             validate: (v) => (v.trim() === "" ? "Required to connect" : null),
@@ -282,11 +310,9 @@ export class GoogleSyncSettingTab extends PluginSettingTab {
             "Your hosted bridge page, also set as the redirect URI in Google Cloud (must match exactly, including any trailing slash).",
             "redirectUri",
             {
-                placeholder: "https://your-bridge.example/callback",
-                validate: (v) =>
-                    v.trim() === "" || v.startsWith("https://")
-                        ? null
-                        : "Must be an https:// URL (Google requires it)",
+                placeholder: "https://your-username.github.io/obsidian-google-sync/",
+                normalize: normalizeRedirectUri,
+                validate: redirectUriWarning,
             },
         );
 

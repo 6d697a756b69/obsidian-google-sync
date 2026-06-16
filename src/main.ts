@@ -12,6 +12,8 @@ import { SyncSuppressor } from "./sync/suppression";
 import { BaselineStore, GoogleBody } from "./sync/baseline";
 import { registerCommands } from "./commands";
 import { ObsidianVaultPort } from "./vault/obsidian-port";
+import { friendlyAuthError } from "./google/auth-errors";
+import { checkCredentialFields, formatCheck } from "./setup-checks";
 
 interface PersistedData {
     settings: GoogleSyncSettings;
@@ -267,12 +269,8 @@ export default class GoogleSyncPlugin extends Plugin {
     /** Full preflight the user can run to verify real-account wiring end to end. */
     async validateSetup(): Promise<string> {
         const s = this.settings;
-        const lines: string[] = [];
+        const lines: string[] = checkCredentialFields(s).map(formatCheck);
         const mark = (ok: boolean, label: string) => lines.push(`${ok ? "[ok]" : "[--]"} ${label}`);
-
-        mark(!!s.clientId, "OAuth client ID");
-        mark(!!s.clientSecret, "OAuth client secret");
-        mark(!!s.redirectUri, "redirect bridge URL");
 
         const connected = await this.auth.isConnected();
         mark(
@@ -482,7 +480,7 @@ export default class GoogleSyncPlugin extends Plugin {
 
     private async onOAuthCallback(params: Record<string, string>): Promise<void> {
         if (params.error) {
-            new Notice(`Google auth failed: ${params.error}`);
+            new Notice(`Google auth failed: ${friendlyAuthError(params.error)}`, 12000);
             return;
         }
         if (!params.code || !params.state) return;
@@ -490,7 +488,7 @@ export default class GoogleSyncPlugin extends Plugin {
             await this.auth.completeAuth(params.code, params.state);
             new Notice("Connected to Google.");
         } catch (e) {
-            new Notice(`Google auth failed: ${(e as Error).message}`);
+            new Notice(`Google auth failed: ${friendlyAuthError(e)}`, 12000);
         } finally {
             // completeAuth consumed the prepared material — rebuild for a future reconnect.
             this.prepareConnect();

@@ -31,6 +31,18 @@ You will:
 - A computer with Obsidian and this plugin installed.
 - A free **GitHub account** (used for the easiest redirect-page option below). If you'd rather use another host, that works too.
 
+## Fast exact-match checklist
+
+Before you click **Connect**, make sure these five things are true:
+
+- The Google OAuth client type is **Web application** (not Desktop app).
+- The **Google Calendar API** and **Google Tasks API** are both enabled in the same project.
+- Your Google account is listed under **Audience → Test users** while the app is in Testing mode.
+- Your bridge URL opens in a browser and uses `https://`.
+- The bridge URL is copied **exactly** into both Google Cloud and Obsidian, including any trailing slash.
+
+Google's console labels change over time. If you do not see the older **APIs & Services → OAuth consent screen** or **Credentials** pages, look for **Google Auth Platform → Branding**, **Audience**, **Data access**, and **Clients** instead.
+
 ---
 
 ## Step 1 — Create a Google Cloud project
@@ -52,11 +64,12 @@ You will:
 
 ## Step 3 — Say who can log in
 
-1. Go to **APIs & Services → OAuth consent screen**.
+1. Go to **APIs & Services → OAuth consent screen**. If Google shows the newer layout, use **Google Auth Platform → Branding** first.
 2. Choose **External**, then continue. (Workspace users with an internal app can pick **Internal**.)
 3. Fill in the required fields — an app name and your email are enough.
-4. Find **Test users** and **add your own Google email address**.
-5. Save.
+4. Open **Audience** (or **Test users** in the older screen) and **add your own Google email address**.
+5. Open **Data access** / scopes if prompted and confirm the Calendar and Tasks scopes below are present.
+6. Save.
 
 You can leave the app in **Testing** mode forever for personal use. That skips Google's public review — the only catch is that **only the test users you listed can log in**, which is exactly what you want.
 
@@ -99,9 +112,9 @@ Upload everything inside the `bridge/` folder to any HTTPS static host (Cloudfla
 
 ## Step 5 — Create the OAuth client (your two values)
 
-1. Go to **APIs & Services → Credentials**.
-2. Click **Create credentials → OAuth client ID**.
-3. **Application type: Web application.**
+1. Go to **APIs & Services → Credentials**. In the newer UI, use **Google Auth Platform → Clients**.
+2. Click **Create credentials → OAuth client ID** or **Create client**.
+3. **Application type: Web application.** Do not choose **Desktop app** for this bridge setup.
 4. Under **Authorized redirect URIs**, click **Add URI** and paste your bridge URL from Step 4 — **exactly**, including the trailing slash.
 5. Click **Create**.
 6. A box pops up with your **Client ID** and **Client secret**. Copy both somewhere safe for the next step.
@@ -160,25 +173,35 @@ To get clean event/task notes with one click, pair this with the **Templater** c
 
 ## If something goes wrong
 
-### "redirect_uri_mismatch"
+Run **Validate setup** first. It checks the local fields and, once connected, checks the chosen calendar and task list.
 
-Your bridge URL must be **identical** in all three places: the Google OAuth client, the plugin setting, and the page that's actually live — **including the trailing slash**. Copy-paste the same string everywhere.
+| Error or symptom | What it usually means | Fix |
+| --- | --- | --- |
+| `Error 400: redirect_uri_mismatch` | The bridge URL in Google's OAuth client is not an exact match for the plugin setting. | Copy the same bridge URL into Google Cloud and Obsidian. Check `https://`, path, and trailing slash. Confirm the OAuth client type is **Web application**. |
+| `access_denied` or “app has not completed verification” | Your app is in Testing mode and your account is not allowed to log in. | Add your Google address under **Audience → Test users**. |
+| `invalid_client` | Wrong Client ID/secret, or values copied from a different OAuth client. | Reopen **Google Auth Platform → Clients** and copy the Client ID and secret from the same **Web application** client. |
+| `invalid_grant` | The sign-in attempt expired, was already used, or the session was revoked. | Run **Connect to Google** again. |
+| Obsidian does not reopen after approval | The bridge loaded, but the `obsidian://google-sync` deep link did not open Obsidian. | Open your bridge URL directly to confirm it loads. Make sure Obsidian is installed and allowed to open `obsidian://` links, especially on iOS. |
+| Validate setup cannot find the calendar or task list | The selected calendar/list ID is not visible to this Google account. | Start with `primary` and `@default`; after a basic sync works, use the dropdown pickers in settings. |
+| Event times look wrong | The timezone is missing or incorrect. | Add a `timezone` field to the note, or set **Default timezone** correctly in settings. |
 
-### Obsidian doesn't reopen after you approve access
+### Screenshot checklist for this guide
 
-Open your bridge URL directly in a browser to confirm it loads. Make sure Obsidian is installed and can open `obsidian://` links (especially on iOS).
+If you are improving these docs, screenshots should show:
 
-### "access_denied" or it won't let you log in
-
-Your Google account must be listed under **Test users** (Step 3) while the app is in Testing mode.
-
-### Validate setup can't find the calendar or task list
-
-Start with `primary` and `@default`. Once a basic sync works, use the dropdown pickers in settings to choose a specific calendar or list.
-
-### Event times look wrong
-
-Add a `timezone` field to the note, or set **Default timezone** correctly in settings.
+1. Google Cloud project picker and **New project**.
+2. API Library search results for **Google Calendar API** and **Google Tasks API**.
+3. Google Auth Platform **Branding** required fields.
+4. **Audience → Test users** with the user's email added.
+5. **Data access** showing the Calendar and Tasks scopes.
+6. **Clients** / **Credentials** creating an OAuth client.
+7. OAuth client type set to **Web application**.
+8. **Authorized redirect URIs** containing the exact bridge URL.
+9. GitHub **Settings → Pages** and **Actions → Deploy OAuth bridge to Pages**.
+10. The successful GitHub Pages URL.
+11. Obsidian plugin settings with Client ID, Client secret, and Redirect bridge URL.
+12. Google consent page, successful bridge return, and Obsidian's connected notice.
+13. A `redirect_uri_mismatch` screenshot annotated with the exact-match checklist.
 
 ## Privacy reminders
 
