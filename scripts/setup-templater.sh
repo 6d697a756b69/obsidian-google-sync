@@ -96,11 +96,20 @@ Templates created by `scripts/setup-templater.sh`:
 - Event template: `templates/google-sync/event-template.md`
 - Task template: `templates/google-sync/task-template.md`
 
-Suggested Templater settings:
+Safe Templater settings for vaults that import from Google:
+
 - Template folder location: `templates`
-- Trigger Templater on new file creation: disabled if you use Import from Google/import-on-startup
+- Trigger Templater on new file creation: disabled
+
+Do not map automatic Templater folder templates to Google Sync's managed `events/` or `tasks/` folders if you import from Google. Templater cannot tell whether a new note was created by you or by Google Sync, so it can overwrite imported notes with template defaults.
+
+Safe options:
+
+- Insert the event/task template manually when you create a note yourself.
+- Use automatic folder templates only in separate draft folders, such as `event-drafts/` or `task-drafts/`.
 
 Suggested Google Sync settings:
+
 - Events folder: `events`
 - Tasks folder: `tasks`
 EOF

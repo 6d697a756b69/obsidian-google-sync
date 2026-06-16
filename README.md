@@ -138,10 +138,13 @@ The body of a task note is not synced. The `notes` frontmatter field maps to Goo
 
 Optional guide: [Templater setup](https://github.com/Cordedmink2/obsidian-google-sync/blob/main/docs/templater-setup.md)
 
-Folder mappings:
+If you import from Google, do **not** use Templater folder-template auto-runs on Google Sync's managed `events/` or `tasks/` folders. Templater cannot tell whether a new file was created by you or by Google Sync, so it can overwrite imported notes with template defaults.
 
-- `events` → `templates/google-sync/event-template.md`
-- `tasks` → `templates/google-sync/task-template.md`
+Safe options:
+
+- Leave **Trigger Templater on new file creation** off and insert templates manually when you create a note yourself.
+- Use automatic folder templates only in separate draft folders, such as `event-drafts/` or `task-drafts/`.
+- Use folder templates on `events/` and `tasks/` only if you never import from Google.
 
 Smoke test helpers:
 

@@ -22,9 +22,9 @@ if [[ ! -d "$VAULT_PATH" ]]; then
   exit 1
 fi
 
-pass() { echo "✅ $1"; }
-warn() { echo "⚠️  $1"; }
-fail() { echo "❌ $1"; FAILED=1; }
+pass() { echo "PASS: $1"; }
+warn() { echo "WARN: $1"; }
+fail() { echo "FAIL: $1"; FAILED=1; }
 
 FAILED=0
 TP_DATA="$VAULT_PATH/.obsidian/plugins/templater-obsidian/data.json"
@@ -45,7 +45,7 @@ try:
     with open(p,'r',encoding='utf-8') as f:
         data=json.load(f)
 except Exception as e:
-    print(f"⚠️  Could not parse templater config JSON: {e}")
+    print(f"WARN: Could not parse templater config JSON: {e}")
     raise SystemExit(0)
 
 templates_folder = data.get('templates_folder')
@@ -53,24 +53,27 @@ trigger = data.get('trigger_on_file_creation')
 raw = json.dumps(data)
 
 if templates_folder == 'templates':
-    print('✅ Templater templates_folder is set to "templates"')
+    print('PASS: Templater templates_folder is set to "templates"')
 else:
-    print('⚠️  Templater templates_folder is not "templates"')
+    print('WARN: Templater templates_folder is not "templates"')
 
 if trigger is True:
-    print('✅ Templater trigger_on_file_creation is enabled')
+    print('WARN: Templater trigger_on_file_creation is enabled. If you import from Google, this can corrupt imported notes unless automatic templates are limited to non-managed draft folders.')
 else:
-    print('⚠️  Templater trigger_on_file_creation is not enabled')
+    print('PASS: Templater trigger_on_file_creation is disabled or unset')
 
-if 'events' in raw and 'templates/google-sync/event-template.md' in raw:
-    print('✅ Found events folder-template mapping in Templater config')
-else:
-    print('⚠️  Could not confirm events folder-template mapping in Templater config')
+has_events_mapping = 'events' in raw and 'templates/google-sync/event-template.md' in raw
+has_tasks_mapping = 'tasks' in raw and 'templates/google-sync/task-template.md' in raw
 
-if 'tasks' in raw and 'templates/google-sync/task-template.md' in raw:
-    print('✅ Found tasks folder-template mapping in Templater config')
+if has_events_mapping:
+    print('WARN: Templater config appears to map an event template to an events-like folder. Do not auto-map Google Sync managed import folders.')
 else:
-    print('⚠️  Could not confirm tasks folder-template mapping in Templater config')
+    print('PASS: No events folder-template mapping detected')
+
+if has_tasks_mapping:
+    print('WARN: Templater config appears to map a task template to a tasks-like folder. Do not auto-map Google Sync managed import folders.')
+else:
+    print('PASS: No tasks folder-template mapping detected')
 PY
 else
   warn "Templater config not found (this is okay if you configure Templater manually)"
@@ -83,4 +86,4 @@ if [[ "$FAILED" -eq 1 ]]; then
   exit 1
 fi
 
-echo "Result: PASS (required items present; check warnings for optional improvements)"
+echo "Result: PASS (required items present; review warnings for risky Templater automation)"

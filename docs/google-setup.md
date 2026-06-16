@@ -154,7 +154,7 @@ To get clean event/task notes with one click, pair this with the **Templater** c
 - Setup guide: [Templater setup](templater-setup.md)
 
 > [!WARNING]
-> If you use **Import from Google** (or import-on-startup), do **not** combine Templater folder templates on `events`/`tasks` with "trigger on new file creation" — it overwrites imported notes. The [Templater setup](templater-setup.md) guide explains the safe options.
+> If you use **Import from Google** or import-on-startup, do **not** use Templater folder-template auto-runs on Google Sync's managed `events`/`tasks` folders. Templater cannot distinguish notes you create from notes Google Sync imports, so it can overwrite imported notes. Use manual template insertion, or automatic templates in separate draft folders. The [Templater setup](templater-setup.md) guide explains the safe options.
 
 ---
 

@@ -1,27 +1,32 @@
 # Templater setup for Google Sync
 
-If you use the **Templater** community plugin, you can standardize new event/task notes so they always include the frontmatter fields Google Sync expects.
+Templater can help you create consistent event/task notes, but it must not automatically run on notes imported by Google Sync.
 
-> [!WARNING]
-> **Do not combine folder templates on your `events`/`tasks` folders with "Trigger Templater on new file creation" if you use _Import from Google_ (including import-on-startup).**
->
-> When Google Sync imports an event/task it creates a note in those folders. With trigger-on-creation enabled, Templater immediately rewrites that note from the template — overwriting the real `title`/`date`/body with the template's defaults. You end up with notes that say `title: Event title`, dated whatever the template hardcodes, even though the file was a real imported event.
->
-> Google Sync writes imported notes inside an echo-suppression window so the rewrite doesn't immediately push, but Templater can still mangle the **local** note. If you import from Google, choose one:
->
-> - **Turn off** "Trigger Templater on new file creation", or
-> - **Remove** the `events`/`tasks` folder-template mappings (apply templates manually to notes you author), or
-> - Only enable folder templates if you never use Import from Google.
->
-> The folder-template workflow below is intended for vaults where you **author** events/tasks locally and push them up — not for pulling them down.
+## Important: avoid folder-template auto-runs on imported notes
+
+Do not map Templater folder templates to Google Sync's managed `events/` or `tasks/` folders while **Trigger Templater on new file creation** is enabled.
+
+Templater cannot tell who created a new file. A note imported by Google Sync and a note you create by hand both look like "a new file in `events/` or `tasks/`". If trigger-on-creation is enabled for those folders, Templater can immediately replace the imported note's real Google data with template defaults such as `title: Event title` or today's date.
+
+Use one of these safe workflows instead:
+
+1. **Manual template insertion**: keep trigger-on-creation off, create your own note, then run Templater's command to insert the event/task template.
+2. **Separate draft folders**: use Templater folder templates only in folders Google Sync does not manage, such as `event-drafts/` or `task-drafts/`.
+3. **No import workflow only**: use folder templates on `events/` and `tasks/` only if you never import from Google.
+
+Recommended setting for vaults that import from Google:
+
+```text
+Trigger Templater on new file creation: Off
+```
 
 ## Install Templater
 
 - In Obsidian: **Settings → Community plugins → Browse**
 - Search for **Templater** and install/enable it
-- Quick link (opens in Obsidian): `obsidian://show-plugin?id=templater-obsidian`
+- Quick link: `obsidian://show-plugin?id=templater-obsidian`
 
-## Fast setup (scripted)
+## Fast setup
 
 From this repo, run:
 
@@ -29,7 +34,7 @@ From this repo, run:
 ./scripts/setup-templater.sh /path/to/your/vault
 ```
 
-This creates (if missing):
+This creates, if missing:
 
 - `templates/google-sync/event-template.md`
 - `templates/google-sync/task-template.md`
@@ -37,55 +42,37 @@ This creates (if missing):
 - `events/`
 - `tasks/`
 
-Optional: also configure Templater plugin defaults in your vault:
+Optional: also set Templater's template folder and safe trigger setting:
 
 ```bash
 ./scripts/setup-templater.sh /path/to/your/vault --configure-templater
 ```
 
-That flag updates (or creates) this file:
-
-- `.obsidian/plugins/templater-obsidian/data.json`
-
-with:
+That updates or creates `.obsidian/plugins/templater-obsidian/data.json` with:
 
 - `templates_folder: "templates"`
-- `trigger_on_file_creation: false` (safe default for vaults that import from Google)
+- `trigger_on_file_creation: false`
 
-## Smoke-test commands (recommended)
+It does not configure folder-template mappings.
 
-After setup, run:
+## Manual setup
 
-```bash
-./scripts/verify-setup.sh /path/to/your/vault
-./scripts/bootstrap-sample-notes.sh /path/to/your/vault
-```
+1. Create `templates/google-sync/`.
+2. Add the event and task templates below.
+3. In **Templater settings**, set **Template folder location** to `templates`.
+4. Leave **Trigger Templater on new file creation** off if you import from Google.
+5. When you create a new note yourself, run Templater's insert-template command and choose the event or task template.
 
-Then in Obsidian:
+If you insist on automatic folder templates, map them only to draft folders that Google Sync does not write to, for example:
 
-1. Run **Sync now**.
-2. Confirm the sample event/task appear in Google.
-3. (Optional) Mark the sample task `completed: true` and sync again.
+- `event-drafts` → `templates/google-sync/event-template.md`
+- `task-drafts` → `templates/google-sync/task-template.md`
 
-## Manual setup (no script)
+Do not map automatic templates to the same `events` and `tasks` folders used for Google imports.
 
-1. Create folder: `templates/google-sync/`
-2. Add templates:
-    - `event-template.md`
-    - `task-template.md`
-3. In **Templater settings**:
-    - Template folder location: `templates`
-    - Trigger Templater on new file creation: **Off if you use Import from Google/import-on-startup**. Turn it on only for vaults where you author notes locally and do not import Google events/tasks.
-4. In **Templater → Folder Templates** (important mapping step):
-    - Map `events` → `templates/google-sync/event-template.md`
-    - Map `tasks` → `templates/google-sync/task-template.md`
-5. In **Google Sync settings**:
-    - Events folder: `events`
-    - Tasks folder: `tasks`
+## Event template
 
-## Example template content
-
-### `event-template.md`
+`templates/google-sync/event-template.md`:
 
 ```yaml
 ---
@@ -118,7 +105,9 @@ Notes:
     -
 ```
 
-### `task-template.md`
+## Task template
+
+`templates/google-sync/task-template.md`:
 
 ```yaml
 ---
@@ -128,33 +117,26 @@ completed: false
 notes: # task details synced to Google Tasks
 parent: # optional "[[Parent task]]" wikilink to nest as a subtask
 ---
-Free-form body stays in Obsidian (not synced).
+Free-form body stays in Obsidian and is not synced.
 ```
 
-## Screenshot walkthrough
+## Smoke test
 
-Add these screenshots to make onboarding click-by-click:
+After setup, run:
 
-1. `docs/assets/templater/templater-settings.png` — Templater settings with:
-    - Template folder location = `templates`
-    - Trigger on new file creation = On
-2. `docs/assets/templater/folder-templates-mapping.png` — Folder Templates mappings:
-    - `events` → `templates/google-sync/event-template.md`
-    - `tasks` → `templates/google-sync/task-template.md`
-3. `docs/assets/templater/google-sync-folders.png` — Google Sync settings showing:
-    - Events folder = `events`
-    - Tasks folder = `tasks`
-
-Reference them in docs once captured:
-
-```md
-![Templater settings](assets/templater/templater-settings.png)
-![Folder template mappings](assets/templater/folder-templates-mapping.png)
-![Google Sync folder settings](assets/templater/google-sync-folders.png)
+```bash
+./scripts/verify-setup.sh /path/to/your/vault
+./scripts/bootstrap-sample-notes.sh /path/to/your/vault
 ```
+
+Then in Obsidian:
+
+1. Run **Sync now**.
+2. Confirm the sample event/task appear in Google.
+3. Optionally mark the sample task `completed: true` and sync again.
 
 ## Notes
 
-- The script does **not** overwrite existing template files.
+- The setup script does not overwrite existing template files.
 - You can change timezone/defaults after generation.
-- If your Google Sync folders are different, update both plugin settings and your template workflow to match.
+- If your Google Sync folders are different, keep Templater's automatic folder templates out of those folders unless import is disabled.
