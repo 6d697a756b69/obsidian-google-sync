@@ -33,7 +33,12 @@ globalThis.fetch = async (url, init = {}) => {
     if (method === "GET" && u.match(/\/calendars\/[^/]+\/events\/smoke-ev-gone/)) {
         return json({ error: { message: "Not Found" } }, 404);
     }
-    if (method === "GET" && u.includes("/lists/") && u.includes("/tasks") && !u.match(/tasks\/[^?]+$/)) {
+    if (
+        method === "GET" &&
+        u.includes("/lists/") &&
+        u.includes("/tasks") &&
+        !u.match(/tasks\/[^?]+$/)
+    ) {
         // Day-quantized future due date: stable within a day (idempotence assertions),
         // never in the past (a past due would file the note to overdue/ mid-test).
         const day = 24 * 3600_000;

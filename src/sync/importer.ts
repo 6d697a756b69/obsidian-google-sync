@@ -181,7 +181,10 @@ export class GoogleImporter {
                 );
                 await this.port.writeFrontmatter(existing, merged);
                 this.onTouch(existing);
-                await this.baselines?.set(existing, projectRemoteBody(event as GoogleBody, "event"));
+                await this.baselines?.set(
+                    existing,
+                    projectRemoteBody(event as GoogleBody, "event"),
+                );
             } else {
                 const path = await pathFor(
                     this.port,
