@@ -24,50 +24,50 @@ export interface ImportOptions {
 }
 
 function filenameSafe(
-  value: string | undefined,
-  fallback: string,
-  maxLength: number,
+    value: string | undefined,
+    fallback: string,
+    maxLength: number,
 ): string {
-  const name = (value || fallback)
-    .normalize("NFKC")
-    .replace(/[\\/:*?"<>|#^\[\]\r\n\t]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, maxLength)
-    .replace(/[. ]+$/g, "");
+    const name = (value || fallback)
+        .normalize("NFKC")
+        .replace(/[\\/:*?"<>|#^\[\]\r\n\t]+/g, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, maxLength)
+        .replace(/[. ]+$/g, "");
 
-  return name || fallback;
+    return name || fallback;
 }
 
 function yyyymmdd(value: string | undefined): string {
-  if (!value) return "00000000";
+    if (!value) return "00000000";
 
-  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (!match) return "00000000";
+    const match = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (!match) return "00000000";
 
-  return `${match[1]}${match[2]}${match[3]}`;
+    return `${match[1]}${match[2]}${match[3]}`;
 }
 
 function basePathFor(
-  folder: string,
-  dateSource: string | undefined,
-  title: string | undefined,
-  fallback: string,
+    folder: string,
+    dateSource: string | undefined,
+    title: string | undefined,
+    fallback: string,
 ): string {
-  const datePart = yyyymmdd(dateSource);
-  const titlePart = filenameSafe(title, fallback, 80);
+    const datePart = yyyymmdd(dateSource);
+    const titlePart = filenameSafe(title, fallback, 80);
 
-  return normalizeVaultPath(`${folder}/${datePart}_${titlePart}.md`);
+    return normalizeVaultPath(`${folder}/${datePart}_${titlePart}.md`);
 }
 
 async function pathFor(
-  port: VaultPort,
-  folder: string,
-  dateSource: string | undefined,
-  title: string | undefined,
-  fallback: string,
+    port: VaultPort,
+    folder: string,
+    dateSource: string | undefined,
+    title: string | undefined,
+    fallback: string,
 ): Promise<string> {
-  return unusedPath(port, basePathFor(folder, dateSource, title, fallback));
+    return unusedPath(port, basePathFor(folder, dateSource, title, fallback));
 }
 
 /**
@@ -285,11 +285,11 @@ export class GoogleImporter {
                 return basenameOf(existing);
             }
             const path = await pathFor(
-              this.port,
-              this.settings().tasksFolder,
-              task.due,
-              task.title,
-              "task",
+                this.port,
+                this.settings().tasksFolder,
+                task.due,
+                task.title,
+                "task",
             );
             await this.port.upsertMarkdown(path, fm);
             this.onTouch(path);
