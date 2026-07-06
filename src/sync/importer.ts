@@ -23,34 +23,51 @@ export interface ImportOptions {
     createOnly?: boolean;
 }
 
-function slugify(value: string, maxLength: number): string {
-    const slug = value
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-+|-+$/g, "")
-        .slice(0, maxLength);
-    return slug.replace(/-+$/g, "") || "untitled";
+function filenameSafe(
+  value: string | undefined,
+  fallback: string,
+  maxLength: number,
+): string {
+  const name = (value || fallback)
+    .normalize("NFKC")
+    .replace(/[\\/:*?"<>|#^\[\]\r\n\t]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, maxLength)
+    .replace(/[. ]+$/g, "");
+
+  return name || fallback;
+}
+
+function yyyymmdd(value: string | undefined): string {
+  if (!value) return "00000000";
+
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!match) return "00000000";
+
+  return `${match[1]}${match[2]}${match[3]}`;
 }
 
 function basePathFor(
-    folder: string,
-    id: string | undefined,
-    title: string | undefined,
-    fallback: string,
+  folder: string,
+  dateSource: string | undefined,
+  title: string | undefined,
+  fallback: string,
 ): string {
-    const titlePart = slugify(title || fallback, 50);
-    const idPart = id ? slugify(id, 80) : "new";
-    return normalizeVaultPath(`${folder}/${titlePart}-${idPart}.md`);
+  const datePart = yyyymmdd(dateSource);
+  const titlePart = filenameSafe(title, fallback, 80);
+
+  return normalizeVaultPath(`${folder}/${datePart}_${titlePart}.md`);
 }
 
 async function pathFor(
-    port: VaultPort,
-    folder: string,
-    id: string | undefined,
-    title: string | undefined,
-    fallback: string,
+  port: VaultPort,
+  folder: string,
+  dateSource: string | undefined,
+  title: string | undefined,
+  fallback: string,
 ): Promise<string> {
-    return unusedPath(port, basePathFor(folder, id, title, fallback));
+  return unusedPath(port, basePathFor(folder, dateSource, title, fallback));
 }
 
 /**
@@ -189,7 +206,7 @@ export class GoogleImporter {
                 const path = await pathFor(
                     this.port,
                     s.eventsFolder,
-                    event.id,
+                    event.start?.date || event.start?.dateTime,
                     event.summary,
                     "event",
                 );
@@ -268,11 +285,11 @@ export class GoogleImporter {
                 return basenameOf(existing);
             }
             const path = await pathFor(
-                this.port,
-                this.settings().tasksFolder,
-                task.id,
-                task.title,
-                "task",
+              this.port,
+              this.settings().tasksFolder,
+              task.due,
+              task.title,
+              "task",
             );
             await this.port.upsertMarkdown(path, fm);
             this.onTouch(path);
